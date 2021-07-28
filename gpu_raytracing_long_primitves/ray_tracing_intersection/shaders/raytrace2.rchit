@@ -14,15 +14,13 @@ layout(location = 1) rayPayloadEXT bool isShadowed;
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(binding = 2, set = 1, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
-layout(binding = 5, set = 1, scalar) buffer Vertices { Vertex v[]; } vertices[];
-layout(binding = 6, set = 1) buffer Indices { uint i[]; } indices[];
+//layout(binding = 2, set = 1, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
+//layout(binding = 5, set = 1, scalar) buffer Vertices { Vertex v[]; } vertices[];
+//layout(binding = 6, set = 1) buffer Indices { uint i[]; } indices[];
 
-layout(binding = 1, set = 1, scalar) buffer MatColorBufferObject { WaveFrontMaterial m[]; } materials[];
-layout(binding = 3, set = 1) uniform sampler2D textureSamplers[];
-layout(binding = 4, set = 1)  buffer MatIndexColorBuffer { int i[]; } matIndex[];
-layout(binding = 7, set = 1, scalar) buffer allSpheres_ {Sphere i[];} allSpheres;
-layout(binding = 8, set = 1, scalar) buffer allBeziers_ {Bezier i[];} allBeziers;
+//layout(binding = 1, set = 1, scalar) buffer MatColorBufferObject { WaveFrontMaterial m[]; } materials[];
+//layout(binding = 3, set = 1) uniform sampler2D textureSamplers[];
+//layout(binding = 4, set = 1)  buffer MatIndexColorBuffer { int i[]; } matIndex[];
 layout(binding = 9, set = 1, scalar, std140) buffer allHairs_ {Hair i[];} allHairs;
 // clang-format on
 
@@ -42,7 +40,7 @@ void main()
 //return;
   vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
-  Sphere instance = allSpheres.i[gl_PrimitiveID];
+ 
   Hair instanceHair = allHairs.i[gl_PrimitiveID];
 
   vec3 normal = allHairs.i[gl_PrimitiveID].n1;

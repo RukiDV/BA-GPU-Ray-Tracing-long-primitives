@@ -164,21 +164,6 @@ public:
   } m_rtPushConstants;
 
 
-  struct Sphere
-  {
-    nvmath::vec3f center;
-    float         radius;
-  };
-
-  struct Bezier
-  {
-    nvmath::vec3 p0;
-    nvmath::vec3 p1;
-    nvmath::vec3 p2;
-    nvmath::vec3 p3;
-    float        thickness;
-  };
-
   struct Hair
   {
     nvmath::vec3 p0;
@@ -196,23 +181,8 @@ public:
     nvmath::vec3f maximum;
   };
 
-  nvvk::RaytracingBuilderKHR::BlasInput sphereToVkGeometryKHR();
-  nvvk::RaytracingBuilderKHR::BlasInput bezierToVkGeometryKHR();
   nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR();
 
-  std::vector<Sphere> m_spheres;                // All spheres
-  nvvk::Buffer        m_spheresBuffer;          // Buffer holding the spheres
-  nvvk::Buffer        m_spheresAabbBuffer;      // Buffer of all Aabb
-  nvvk::Buffer        m_spheresMatColorBuffer;  // Multiple materials
-  nvvk::Buffer        m_spheresMatIndexBuffer;  // Define which sphere uses which material
-  void                createSpheres(uint32_t nbSpheres);
-
-  std::vector<Bezier> m_beziers;                // All beziers
-  nvvk::Buffer        m_beziersBuffer;          // Buffer holding the beziers
-  nvvk::Buffer        m_bezierAabbBuffer;       // Buffer of all Aabb
-  nvvk::Buffer        m_beziersMatColorBuffer;  // Multiple materials
-  nvvk::Buffer        m_bezierMatIndexBuffer;   // Define which sphere uses which material
-  void                createBeziers(uint32_t nbBeziers);
 
   std::vector<Hair> m_hairs;            // All beziers
   nvvk::Buffer      m_hairsBuffer;      // Buffer holding the beziers

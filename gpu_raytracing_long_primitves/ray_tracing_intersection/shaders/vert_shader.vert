@@ -6,7 +6,7 @@
 #include "wavefront.glsl"
 
 // clang-format off
-layout(binding = 2, set = 0, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
+//layout(binding = 2, set = 0, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
 // clang-format on
 
 layout(binding = 0) uniform UniformBufferObject
@@ -46,6 +46,7 @@ out gl_PerVertex
 
 void main()
 {
+#if 0
  mat4 objMatrix   = scnDesc.i[pushC.instanceId].transfo;
   mat4 objMatrixIT = scnDesc.i[pushC.instanceId].transfoIT;
 
@@ -58,4 +59,5 @@ void main()
   //  matIndex     = inMatID;
 
   gl_Position = ubo.proj * ubo.view * vec4(worldPos, 1.0);
+  #endif
 }

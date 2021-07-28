@@ -72,7 +72,7 @@ void renderUI(HelloVulkan& helloVk)
     ImGui::SliderFloat3("Position", &helloVk.m_pushConstant.lightPosition.x, -20.f, 20.f);
     ImGui::SliderFloat("Intensity", &helloVk.m_pushConstant.lightIntensity, 0.f, 150.f);
   }
-  ImGui::Text("Nb Spheres and Cubes: %d", helloVk.m_spheres.size());
+  //ImGui::Text("Nb Spheres and Cubes: %d", helloVk.m_spheres.size());
 }
 
 
@@ -178,11 +178,7 @@ int main(int argc, char** argv)
   helloVk.initGUI(0);  // Using sub-pass 0
 
   // Creation of the example
-  //helloVk.loadModel(nvh::findFile("media/scenes/Medieval_building.obj", defaultSearchPaths, true));
-  helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
-  //helloVk.loadModel(nvh::findFile("media/scenes/bear.obj", defaultSearchPaths, true));
-  //helloVk.createSpheres(100);
-  //helloVk.createBeziers(1);
+ // helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
 
   cyHairFile myHairFile;
   const char* filename = "C:/Users/redevran/Desktop/GPU-Ray-Tracing-Long-Primitives/vk_gpu_raytracing/media/scenes/dark.hair";

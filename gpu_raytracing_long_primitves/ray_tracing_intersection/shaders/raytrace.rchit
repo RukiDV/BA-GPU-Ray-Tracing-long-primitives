@@ -14,13 +14,13 @@ layout(location = 1) rayPayloadEXT bool isShadowed;
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 
-layout(binding = 2, set = 1, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
+/*layout(binding = 2, set = 1, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
 layout(binding = 5, set = 1, scalar) buffer Vertices { Vertex v[]; } vertices[];
 layout(binding = 6, set = 1) buffer Indices { uint i[]; } indices[];
 
 layout(binding = 1, set = 1, scalar) buffer MatColorBufferObject { WaveFrontMaterial m[]; } materials[];
 layout(binding = 3, set = 1) uniform sampler2D textureSamplers[];
-layout(binding = 4, set = 1)  buffer MatIndexColorBuffer { int i[]; } matIndex[];
+layout(binding = 4, set = 1)  buffer MatIndexColorBuffer { int i[]; } matIndex[];*/
 
 // clang-format on
 
@@ -36,6 +36,7 @@ pushC;
 
 void main()
 {
+#if 0
   // Object of this instance
   uint objId = scnDesc.i[gl_InstanceCustomIndexEXT].objId;
 
@@ -131,4 +132,5 @@ void main()
   }
 
   prd.hitValue = vec3(lightIntensity * attenuation * (diffuse + specular)); //vec3(0.3, 0.3, 0.3);
+  #endif
 }

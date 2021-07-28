@@ -131,31 +131,8 @@ void HelloVulkan::createDescriptorSetLayout()
   // Camera matrices (binding = 0)
   m_descSetLayoutBind.addBinding(
       vkDS(0, vkDT::eUniformBuffer, 1, vkSS::eVertex | vkSS::eRaygenKHR));
-  // Materials (binding = 1)
-  m_descSetLayoutBind.addBinding(vkDS(1, vkDT::eStorageBuffer, nbObj + 1,
-                                      vkSS::eVertex | vkSS::eFragment | vkSS::eClosestHitKHR));
-  // Scene description (binding = 2)
-  m_descSetLayoutBind.addBinding(  //
-      vkDS(2, vkDT::eStorageBuffer, 1, vkSS::eVertex | vkSS::eFragment | vkSS::eClosestHitKHR));
-  // Textures (binding = 3)
-  m_descSetLayoutBind.addBinding(
-      vkDS(3, vkDT::eCombinedImageSampler, nbTxt, vkSS::eFragment | vkSS::eClosestHitKHR));
-  // Materials Index (binding = 4)
-  m_descSetLayoutBind.addBinding(
-      vkDS(4, vkDT::eStorageBuffer, nbObj + 1, vkSS::eFragment | vkSS::eClosestHitKHR));
-  // Storing vertices (binding = 5)
-  m_descSetLayoutBind.addBinding(  //
-      vkDS(5, vkDT::eStorageBuffer, nbObj, vkSS::eClosestHitKHR));
-  // Storing indices (binding = 6)
-  m_descSetLayoutBind.addBinding(  //
-      vkDS(6, vkDT::eStorageBuffer, nbObj, vkSS::eClosestHitKHR));
-  // Storing spheres (binding = 7)
-  m_descSetLayoutBind.addBinding(  //
-      vkDS(7, vkDT::eStorageBuffer, 1, vkSS::eClosestHitKHR | vkSS::eIntersectionKHR));
-  // Storing beziers (binding = 8)
-  m_descSetLayoutBind.addBinding(  //
-      vkDS(8, vkDT::eStorageBuffer, 1, vkSS::eClosestHitKHR | vkSS::eIntersectionKHR));
-  // Storing beziers (binding = 8)
+
+  // Storing hairs (binding = 9)
   m_descSetLayoutBind.addBinding(  //
       vkDS(9, vkDT::eStorageBuffer, 1, vkSS::eClosestHitKHR | vkSS::eIntersectionKHR));
 
@@ -175,8 +152,8 @@ void HelloVulkan::updateDescriptorSet()
   // Camera matrices and scene description
   vk::DescriptorBufferInfo dbiUnif{m_cameraMat.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 0, &dbiUnif));
-  vk::DescriptorBufferInfo dbiSceneDesc{m_sceneDesc.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 2, &dbiSceneDesc));
+ /* vk::DescriptorBufferInfo dbiSceneDesc{m_sceneDesc.buffer, 0, VK_WHOLE_SIZE};
+  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 2, &dbiSceneDesc));*/
 
   // All material buffers, 1 buffer per OBJ
   std::vector<vk::DescriptorBufferInfo> dbiMat;
@@ -190,34 +167,9 @@ void HelloVulkan::updateDescriptorSet()
     dbiVert.emplace_back(obj.vertexBuffer.buffer, 0, VK_WHOLE_SIZE);
     dbiIdx.emplace_back(obj.indexBuffer.buffer, 0, VK_WHOLE_SIZE);
   }
-  dbiMat.emplace_back(m_spheresMatColorBuffer.buffer, 0, VK_WHOLE_SIZE);
-  dbiMatIdx.emplace_back(m_spheresMatIndexBuffer.buffer, 0, VK_WHOLE_SIZE);
-
-  dbiMat.emplace_back(m_beziersMatColorBuffer.buffer, 0, VK_WHOLE_SIZE);
-  dbiMatIdx.emplace_back(m_bezierMatIndexBuffer.buffer, 0, VK_WHOLE_SIZE);
-
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 1, dbiMat.data()));
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 4, dbiMatIdx.data()));
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 5, dbiVert.data()));
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 6, dbiIdx.data()));
-
-  vk::DescriptorBufferInfo dbiSpheres{m_spheresBuffer.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 7, &dbiSpheres));
-
-  vk::DescriptorBufferInfo dbiBeziers{m_beziersBuffer.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 8, &dbiBeziers));
 
   vk::DescriptorBufferInfo dbiHairs{m_hairsBuffer.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 9, &dbiHairs));
-
-
-  // All texture samplers
-  std::vector<vk::DescriptorImageInfo> diit;
-  for(auto& texture : m_textures)
-  {
-    diit.emplace_back(texture.descriptor);
-  }
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 3, diit.data()));
 
   // Writing the information
   m_device.updateDescriptorSets(static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
@@ -362,89 +314,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
   }
   nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
   vk::CommandBuffer cmdBuf = genCmdBuf.createCommandBuffer();
-#if 0
-  using vkBU = vk::BufferUsageFlagBits;
-
-  nvmath::mat4f transform = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-                             0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-
-  ObjInstance instance;
-  instance.objIndex    = static_cast<uint32_t>(m_objModel.size());
-  instance.transform   = transform;
-  instance.transformIT = nvmath::transpose(nvmath::invert(transform));
-  instance.txtOffset   = static_cast<uint32_t>(m_textures.size());
-
-  ObjLoader loader;
-  ObjModel  model;
-  model.nbIndices  = static_cast<uint32_t>(hairfile.GetHeader().point_count);
-  model.nbVertices = static_cast<uint32_t>(hairfile.GetHeader().point_count);
-  // Create the buffers on Device and copy vertices, indices and materials
-  
-  std::vector<VertexObj> myVertices;
-	
-  for(int i = 0; i < hairfile.GetHeader().point_count - 2; i += 3)
-  {
-    myVertices.push_back(VertexObj{
-        nvmath::vec3(hairfile.GetPointsArray()[i], hairfile.GetPointsArray()[i + 1],
-                     hairfile.GetPointsArray()[i + 2]),
-        nvmath::vec3(0.0f, 1.0f, 1.0f), nvmath::vec3(0.0f, 0.0f, 1.0f), nvmath::vec2(1.0f, 0.0f)});
-  }
-  model.vertexBuffer =
-      m_alloc.createBuffer(cmdBuf, myVertices,
-                           vkBU::eVertexBuffer | vkBU::eStorageBuffer | vkBU::eShaderDeviceAddress
-                               | vkBU::eAccelerationStructureBuildInputReadOnlyKHR);
-
-  std::vector<uint32_t> myIndices;
-  for(int i = 0; i < hairfile.GetHeader().point_count; i++)
-  {
-    myIndices.push_back(*reinterpret_cast<uint32_t const*>(hairfile.GetSegmentsArray()));
-  }
-  model.indexBuffer =
-      m_alloc.createBuffer(cmdBuf, myIndices,
-                           vkBU::eIndexBuffer | vkBU::eStorageBuffer | vkBU::eShaderDeviceAddress
-                               | vkBU::eAccelerationStructureBuildInputReadOnlyKHR);
-
-  std::vector<MaterialObj> myColors;
-  for(int i = 0; i < hairfile.GetHeader().point_count - 2; i += 3)
-  {
-    myColors.push_back(
-        MaterialObj{nvmath::vec3(hairfile.GetColorsArray()[i], hairfile.GetColorsArray()[i + 1],
-                                 hairfile.GetColorsArray()[i + 2]),
-                    nvmath::vec3(hairfile.GetColorsArray()[i], hairfile.GetColorsArray()[i + 1],
-                                 hairfile.GetColorsArray()[i + 2]),
-                    nvmath::vec3(1.0f, 1.0f, 1.0f), nvmath::vec3(0.0f, 0.0f, 0.0f),
-                    nvmath::vec3(0.0f, 0.0f, 0.10), 0.f, 1.0f, 1.f, 0, -1});
-  }
-
-  /*std::vector<MaterialObj> m_materials = MaterialObj({nvmath::vec3f(0.1f, 0.1f, 0.1f),
-                                          nvmath::vec3f(0.7f, 0.7f, 0.7f),
-                                          nvmath::vec3f(1.0f, 1.0f, 1.0f),
-                                          nvmath::vec3f(0.0f, 0.0f, 0.0f),
-                                          nvmath::vec3f(0.0f, 0.0f, 0.10),
-                                          0.f,
-                                          1.0f,
-                                          1.f,
-                                          0,
-                                          -1}); */
-  std::vector<int32_t> m_matIndx = {0};
-  model.matColorBuffer           = m_alloc.createBuffer(cmdBuf, myColors, vkBU::eStorageBuffer);
-  model.matIndexBuffer           = m_alloc.createBuffer(cmdBuf, m_matIndx, vkBU::eStorageBuffer);
-
-  // Creates all textures found
-  /*createTextureImages(cmdBuf, loader.m_textures);
-  cmdBufGet.submitAndWait(cmdBuf);
-  m_alloc.finalizeAndReleaseStaging();*/
-
-  std::string objNb = std::to_string(instance.objIndex);
-  m_debug.setObjectName(model.vertexBuffer.buffer, (std::string("vertex_" + objNb).c_str()));
-  m_debug.setObjectName(model.indexBuffer.buffer, (std::string("index_" + objNb).c_str()));
-  m_debug.setObjectName(model.matColorBuffer.buffer, (std::string("mat_" + objNb).c_str()));
-  m_debug.setObjectName(model.matIndexBuffer.buffer, (std::string("matIdx_" + objNb).c_str()));
-
-
-  m_objModel.emplace_back(model);
-  m_objInstance.emplace_back(instance);
-#endif
 
 #if 1
   std::vector<Aabb>     hairAabbs;
@@ -526,7 +395,7 @@ void HelloVulkan::createUniformBuffer()
 //
 void HelloVulkan::createSceneDescriptionBuffer()
 {
-  using vkBU = vk::BufferUsageFlagBits;
+  /*using vkBU = vk::BufferUsageFlagBits;
   nvvk::CommandPool cmdGen(m_device, m_graphicsQueueIndex);
 
   auto cmdBuf = cmdGen.createCommandBuffer();
@@ -534,6 +403,7 @@ void HelloVulkan::createSceneDescriptionBuffer()
   cmdGen.submitAndWait(cmdBuf);
   m_alloc.finalizeAndReleaseStaging();
   m_debug.setObjectName(m_sceneDesc.buffer, "sceneDesc");
+  */
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -657,16 +527,8 @@ void HelloVulkan::destroyResources()
   m_alloc.destroy(m_rtSBTBuffer);
 
 
-  m_alloc.destroy(m_spheresBuffer);
-  m_alloc.destroy(m_beziersBuffer);
   m_alloc.destroy(m_hairsBuffer);
-  m_alloc.destroy(m_spheresAabbBuffer);
-  m_alloc.destroy(m_bezierAabbBuffer);
   m_alloc.destroy(m_hairsAabbBuffer);
-  m_alloc.destroy(m_spheresMatColorBuffer);
-  m_alloc.destroy(m_beziersMatColorBuffer);
-  m_alloc.destroy(m_spheresMatIndexBuffer);
-  m_alloc.destroy(m_bezierMatIndexBuffer);
 
   m_alloc.deinit();
 }
@@ -891,99 +753,7 @@ void HelloVulkan::initRayTracing()
 //--------------------------------------------------------------------------------------------------
 // Converting a OBJ primitive to the ray tracing geometry used for the BLAS
 //
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
-{
-  vk::DeviceAddress vertexAddress = m_device.getBufferAddress({model.vertexBuffer.buffer});
-  vk::DeviceAddress indexAddress  = m_device.getBufferAddress({model.indexBuffer.buffer});
 
-  vk::AccelerationStructureGeometryTrianglesDataKHR triangles;
-  triangles.setVertexFormat(vk::Format::eR32G32B32Sfloat);
-  triangles.setVertexData(vertexAddress);
-  triangles.setVertexStride(sizeof(VertexObj));
-  triangles.setIndexType(vk::IndexType::eUint32);
-  triangles.setIndexData(indexAddress);
-  triangles.setTransformData({});
-  triangles.setMaxVertex(model.nbVertices);
-
-  // Setting up the build info of the acceleration
-  vk::AccelerationStructureGeometryKHR asGeom;
-  asGeom.setGeometryType(vk::GeometryTypeKHR::eTriangles);
-  asGeom.setFlags(vk::GeometryFlagBitsKHR::eOpaque);
-  asGeom.geometry.setTriangles(triangles);
-
-  vk::AccelerationStructureBuildRangeInfoKHR offset;
-  offset.setFirstVertex(0);
-  offset.setPrimitiveCount(model.nbIndices / 3);  // Nb triangles
-  offset.setPrimitiveOffset(0);
-  offset.setTransformOffset(0);
-
-  nvvk::RaytracingBuilderKHR::BlasInput input;
-  input.asGeometry.emplace_back(asGeom);
-  input.asBuildOffsetInfo.emplace_back(offset);
-  return input;
-}
-
-//--------------------------------------------------------------------------------------------------
-// Returning the ray tracing geometry used for the BLAS, containing all spheres
-//
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::sphereToVkGeometryKHR()
-{
-  vk::DeviceAddress dataAddress = m_device.getBufferAddress({m_spheresAabbBuffer.buffer});
-
-  vk::AccelerationStructureGeometryAabbsDataKHR aabbs;
-  aabbs.setData(dataAddress);
-  aabbs.setStride(sizeof(Aabb));
-
-  // Setting up the build info of the acceleration (C version, c++ gives wrong type)
-  vk::AccelerationStructureGeometryKHR asGeom(vk::GeometryTypeKHR::eAabbs, aabbs,
-                                              vk::GeometryFlagBitsKHR::eOpaque);
-  //asGeom.geometryType   = vk::GeometryTypeKHR::eAabbs;
-  //asGeom.flags          = vk::GeometryFlagBitsKHR::eOpaque;
-  //asGeom.geometry.aabbs = aabbs;
-
-
-  vk::AccelerationStructureBuildRangeInfoKHR offset;
-  offset.setFirstVertex(0);
-  offset.setPrimitiveCount((uint32_t)m_spheres.size());  // Nb aabb
-  offset.setPrimitiveOffset(0);
-  offset.setTransformOffset(0);
-
-  nvvk::RaytracingBuilderKHR::BlasInput input;
-  input.asGeometry.emplace_back(asGeom);
-  input.asBuildOffsetInfo.emplace_back(offset);
-
-  return input;
-}
-
-// Returning the ray tracing geometry used for the BLAS, containing all spheres
-//
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::bezierToVkGeometryKHR()
-{
-  vk::DeviceAddress dataAddress = m_device.getBufferAddress({m_bezierAabbBuffer.buffer});
-
-  vk::AccelerationStructureGeometryAabbsDataKHR aabbs;
-  aabbs.setData(dataAddress);
-  aabbs.setStride(sizeof(Aabb));
-
-  // Setting up the build info of the acceleration (C version, c++ gives wrong type)
-  vk::AccelerationStructureGeometryKHR asGeom(vk::GeometryTypeKHR::eAabbs, aabbs,
-                                              vk::GeometryFlagBitsKHR::eOpaque);
-  //asGeom.geometryType   = vk::GeometryTypeKHR::eAabbs;
-  //asGeom.flags          = vk::GeometryFlagBitsKHR::eOpaque;
-  //asGeom.geometry.aabbs = aabbs;
-
-
-  vk::AccelerationStructureBuildRangeInfoKHR offset;
-  offset.setFirstVertex(0);
-  offset.setPrimitiveCount((uint32_t)m_beziers.size());  // Nb aabb
-  offset.setPrimitiveOffset(0);
-  offset.setTransformOffset(0);
-
-  nvvk::RaytracingBuilderKHR::BlasInput input;
-  input.asGeometry.emplace_back(asGeom);
-  input.asBuildOffsetInfo.emplace_back(offset);
-  return input;
-}
 
 // Returning the ray tracing geometry used for the BLAS, containing all spheres
 //
@@ -1015,193 +785,16 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
   return input;
 }
 
-//--------------------------------------------------------------------------------------------------
-// Creating all spheres
-//
-void HelloVulkan::createSpheres(uint32_t nbSpheres)
-{
-#if 0
-  std::random_device                    rd{};
-  std::mt19937                          gen{rd()};
-  std::normal_distribution<float>       xzd{0.f, 5.f};
-  std::normal_distribution<float>       yd{6.f, 3.f};
-  std::uniform_real_distribution<float> radd{.05f, .2f};
-
-  // All spheres
-  Sphere s;
-  m_spheres.resize(nbSpheres);
-  for(uint32_t i = 0; i < nbSpheres; i++)
-  {
-    s.center     = nvmath::vec3f(xzd(gen), yd(gen), xzd(gen));
-    s.radius     = radd(gen);
-    m_spheres[i] = std::move(s);
-  }
-
-  // Axis aligned bounding box of each sphere
-  std::vector<Aabb> aabbs;
-  aabbs.reserve(nbSpheres);
-  for(const auto& s : m_spheres)
-  {
-    Aabb aabb;
-    aabb.minimum = s.center - nvmath::vec3f(s.radius);
-    aabb.maximum = s.center + nvmath::vec3f(s.radius);
-    aabbs.emplace_back(aabb);
-  }
-
-  // Creating two materials
-  MaterialObj mat;
-  mat.diffuse = nvmath::vec3f(0, 1, 1);
-  std::vector<MaterialObj> materials;
-  std::vector<int>         matIdx(nbSpheres);
-  materials.emplace_back(mat);
-  mat.diffuse = nvmath::vec3f(1, 1, 0);
-  materials.emplace_back(mat);
-
-  // Assign a material to each sphere
-  for(size_t i = 0; i < m_spheres.size(); i++)
-  {
-    matIdx[i] = i % 2;
-  }
-
-  // Creating all buffers
-  using vkBU = vk::BufferUsageFlagBits;
-  nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-  auto              cmdBuf = genCmdBuf.createCommandBuffer();
-  m_spheresBuffer          = m_alloc.createBuffer(cmdBuf, m_spheres, vkBU::eStorageBuffer);
-  m_spheresAabbBuffer      = m_alloc.createBuffer(cmdBuf, aabbs, vkBU::eShaderDeviceAddress);
-  m_spheresMatIndexBuffer  = m_alloc.createBuffer(cmdBuf, matIdx, vkBU::eStorageBuffer);
-  m_spheresMatColorBuffer  = m_alloc.createBuffer(cmdBuf, materials, vkBU::eStorageBuffer);
-  genCmdBuf.submitAndWait(cmdBuf);
-
-  // Debug information
-  m_debug.setObjectName(m_spheresBuffer.buffer, "spheres");
-  m_debug.setObjectName(m_spheresAabbBuffer.buffer, "spheresAabb");
-  m_debug.setObjectName(m_spheresMatColorBuffer.buffer, "spheresMat");
-  m_debug.setObjectName(m_spheresMatIndexBuffer.buffer, "spheresMatIdx");
-
-#endif
-}
-
-// Creating all beziers
-//
-
-void HelloVulkan::createBeziers(uint32_t nbBeziers)
-{
-#if 0
-  // All beziers
-  m_beziers.push_back(Bezier{nvmath::vec3(15.0f, 1.0f, 15.0f), nvmath::vec3(10.0f, 10.0f, -5.0f),
-                             nvmath::vec3(-10.0f, 15.0f, 5.0f), nvmath::vec3(-15.0f, 5.0f, -15.0f),
-                             0.2f});
-  // Creating two materials
-  MaterialObj mat;
-  mat.diffuse = nvmath::vec3f(0, 1, 1);
-  std::vector<MaterialObj> materials;
-  std::vector<int>         matIdx(nbBeziers);
-  materials.emplace_back(mat);
-  mat.diffuse = nvmath::vec3f(1, 1, 0);
-  materials.emplace_back(mat);
-
-  // Creating all buffers
-  using vkBU = vk::BufferUsageFlagBits;
-  nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-  auto              cmdBuf = genCmdBuf.createCommandBuffer();
-  std::vector<Aabb> bezierAabbs;
-
-  //Box Bezier
-  for(const auto bezier : m_beziers)
-  {
-    // extremes
-    nvmath::vec3 mi = nvmath::nv_min(bezier.p0, bezier.p3);
-    nvmath::vec3 ma = nvmath::nv_max(bezier.p0, bezier.p3);
-
-    // note pascal triangle coefficnets
-    nvmath::vec3 c = -1.0f * bezier.p0 + 1.0f * bezier.p1;
-    nvmath::vec3 b = 1.0f * bezier.p0 - 2.0f * bezier.p1 + 1.0f * bezier.p2;
-    nvmath::vec3 a = -1.0f * bezier.p0 + 3.0f * bezier.p1 - 3.0f * bezier.p2 + 1.0f * bezier.p3;
-
-    nvmath::vec3 h = b * b - a * c;
-
-    // real solutions
-    if(h.x > 0.0f || h.y > 0.0f || h.z > 0.0f)
-    {
-      nvmath::vec3 g = nvmath::nv_abs(h);
-      g.x            = sqrt(g.x);
-      g.y            = sqrt(g.y);
-      g.z            = sqrt(g.z);
-
-      nvmath::vec3 t1 = nvmath::nv_clamp((-b - g) / a, 0.0f, 1.0f);
-      nvmath::vec3 s1 = nvmath::vec3(1.0f, 1.0f, 1.0f) - t1;
-      nvmath::vec3 t2 = nvmath::nv_clamp((-b + g) / a, 0.0f, 1.0f);
-      nvmath::vec3 s2 = nvmath::vec3(1.0f, 1.0f, 1.0f) - t2;
-      nvmath::vec3 q1 = s1 * s1 * s1 * bezier.p0 + 3.0f * s1 * s1 * t1 * bezier.p1
-                        + 3.0f * s1 * t1 * t1 * bezier.p2 + t1 * t1 * t1 * bezier.p3;
-      nvmath::vec3 q2 = s2 * s2 * s2 * bezier.p0 + 3.0f * s2 * s2 * t2 * bezier.p1
-                        + 3.0f * s2 * t2 * t2 * bezier.p2 + t2 * t2 * t2 * bezier.p3;
-
-      if(h.x > 0.0)
-      {
-        mi.x = nvmath::nv_min(mi.x, nvmath::nv_min(q1.x, q2.x));
-        ma.x = nvmath::nv_max(ma.x, nvmath::nv_max(q1.x, q2.x));
-      }
-      if(h.y > 0.0)
-      {
-        mi.y = nvmath::nv_min(mi.y, nvmath::nv_min(q1.y, q2.y));
-        ma.y = nvmath::nv_max(ma.y, nvmath::nv_max(q1.y, q2.y));
-      }
-      if(h.z > 0.0)
-      {
-        mi.z = nvmath::nv_min(mi.z, nvmath::nv_min(q1.z, q2.z));
-        ma.z = nvmath::nv_max(ma.z, nvmath::nv_max(q1.z, q2.z));
-      }
-    }
-    Aabb aabb;
-    aabb.minimum = mi;
-    aabb.maximum = ma;
-    aabb.minimum -= nvmath::vec3(bezier.thickness, bezier.thickness, bezier.thickness);
-    aabb.maximum += nvmath::vec3(bezier.thickness, bezier.thickness, bezier.thickness);
-    bezierAabbs.emplace_back(aabb);
-  }
-
-  m_beziersBuffer         = m_alloc.createBuffer(cmdBuf, m_beziers, vkBU::eStorageBuffer);
-  m_bezierAabbBuffer      = m_alloc.createBuffer(cmdBuf, bezierAabbs, vkBU::eShaderDeviceAddress);
-  m_bezierMatIndexBuffer  = m_alloc.createBuffer(cmdBuf, matIdx, vkBU::eStorageBuffer);
-  m_beziersMatColorBuffer = m_alloc.createBuffer(cmdBuf, materials, vkBU::eStorageBuffer);
-  genCmdBuf.submitAndWait(cmdBuf);
-
-  // Debug information
-  m_debug.setObjectName(m_beziersBuffer.buffer, "bezier");
-  m_debug.setObjectName(m_bezierAabbBuffer.buffer, "bezierAabb");
-  m_debug.setObjectName(m_beziersMatColorBuffer.buffer, "bezierMat");
-  m_debug.setObjectName(m_bezierMatIndexBuffer.buffer, "bezierMatIdx");
-	
-#endif
-}
-
-
-
 //Create Hair
-
 
 void HelloVulkan::createBottomLevelAS()
 {
   // BLAS - Storing each primitive in a geometry
   std::vector<nvvk::RaytracingBuilderKHR::BlasInput> allBlas;
-  allBlas.reserve(m_objModel.size());
-  for(const auto& obj : m_objModel)
+  
+  // hairs
   {
-    auto blas = objectToVkGeometryKHR(obj);
-
-    // We could add more geometry in each BLAS, but we add only one for now
-    //allBlas.emplace_back(blas);
-  }
-
-  // Spheres and bezier
-  {
-   // auto blas       = sphereToVkGeometryKHR();
-    //auto blasBezier = bezierToVkGeometryKHR();
     auto blasHair   = hairToVkGeometryKHR();
-   // allBlas.emplace_back(blas);
-   // allBlas.emplace_back(blasBezier);
     allBlas.emplace_back(blasHair);
   }
 
@@ -1212,46 +805,16 @@ void HelloVulkan::createTopLevelAS()
 {
   std::vector<nvvk::RaytracingBuilderKHR::Instance> tlas;
   tlas.reserve(m_objInstance.size());
-  /*for(uint32_t i = 0; i < static_cast<uint32_t>(m_objInstance.size()); i++)
-  {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_objInstance[i].transform;  // Position of the instance
-    rayInst.instanceCustomId = i;                           // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = m_objInstance[i].objIndex;
-    rayInst.hitGroupId       = 0;  // We will use the same hit group for all objects
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  }*/
+  
+  // Add the blas containing all hairs
 
-  // Add the blas containing all spheres, beziers, hairs
-#if 0
-  {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_objInstance[0].transform;          // Position of the instance
-    rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = 1;  //static_cast<uint32_t>(m_objModel.size());
-    rayInst.hitGroupId       = 1;  // We will use the same hit group for all objects
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  }
-
-  {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_objInstance[0].transform;          // Position of the instance
-    rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = 2;
-    rayInst.hitGroupId       = 1;  // We will use the same hit group for all objects
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  }
-#endif
 #if 1
   {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_objInstance[0].transform;          // Position of the instance
+    //rayInst.transform        = m_objInstance[0].transform;          // Position of the instance
     rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
     rayInst.blasId           = 0;
-    rayInst.hitGroupId       = 1;  // We will use the same hit group for all objects
+    rayInst.hitGroupId       = 0;  // We will use the same hit group for all objects
     rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     tlas.emplace_back(rayInst);
   }
@@ -1344,7 +907,7 @@ void HelloVulkan::createRtPipeline()
   mg.setGeneralShader(static_cast<uint32_t>(stages.size()));
   stages.push_back({{}, vk::ShaderStageFlagBits::eMissKHR, shadowmissSM, "main"});
   m_rtShaderGroups.push_back(mg);
-
+#if 0
   // Hit Group0 - Closest Hit
   vk::ShaderModule chitSM = nvvk::createShaderModule(
       m_device, nvh::loadFile("spv/raytrace.rchit.spv", true, defaultSearchPaths, true));
@@ -1357,7 +920,7 @@ void HelloVulkan::createRtPipeline()
     stages.push_back({{}, vk::ShaderStageFlagBits::eClosestHitKHR, chitSM, "main"});
     m_rtShaderGroups.push_back(hg);
   }
-
+#endif
   // Hit Group1 - Closest Hit + Intersection (procedural)
   vk::ShaderModule chit2SM = nvvk::createShaderModule(
       m_device, nvh::loadFile("spv/raytrace2.rchit.spv", true, defaultSearchPaths, true));
@@ -1408,7 +971,7 @@ void HelloVulkan::createRtPipeline()
   m_device.destroy(raygenSM);
   m_device.destroy(missSM);
   m_device.destroy(shadowmissSM);
-  m_device.destroy(chitSM);
+  //m_device.destroy(chitSM);
   m_device.destroy(chit2SM);
   m_device.destroy(rintSM);
 }

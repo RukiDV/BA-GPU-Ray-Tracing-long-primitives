@@ -26,16 +26,17 @@ layout(location = 4) in vec3 worldPos;
 // Outgoing
 layout(location = 0) out vec4 outColor;
 // Buffers
-layout(binding = 1, scalar) buffer MatColorBufferObject { WaveFrontMaterial m[]; } materials[];
+/*layout(binding = 1, scalar) buffer MatColorBufferObject { WaveFrontMaterial m[]; } materials[];
 layout(binding = 2, scalar) buffer ScnDesc { sceneDesc i[]; } scnDesc;
 layout(binding = 3) uniform sampler2D[] textureSamplers;
 layout(binding = 4, scalar) buffer MatIndex { int i[]; } matIdx[];
-
+*/
 // clang-format on
 
 
 void main()
 {
+#if 0
   // Object of this instance
   int objId = scnDesc.i[pushC.instanceId].objId;
 
@@ -76,4 +77,5 @@ void main()
 
   // Result
   outColor = vec4(lightIntensity * (diffuse + specular), 1);
+  #endif
 } 
