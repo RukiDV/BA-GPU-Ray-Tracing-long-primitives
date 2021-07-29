@@ -32,3 +32,4 @@ bin_x64
 build
 cmake-build-*
 .*
+shared*
