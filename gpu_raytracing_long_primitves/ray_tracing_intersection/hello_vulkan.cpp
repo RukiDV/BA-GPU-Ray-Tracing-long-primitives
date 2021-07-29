@@ -155,6 +155,7 @@ void HelloVulkan::updateDescriptorSet()
  /* vk::DescriptorBufferInfo dbiSceneDesc{m_sceneDesc.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 2, &dbiSceneDesc));*/
 
+#if 0
   // All material buffers, 1 buffer per OBJ
   std::vector<vk::DescriptorBufferInfo> dbiMat;
   std::vector<vk::DescriptorBufferInfo> dbiMatIdx;
@@ -167,6 +168,7 @@ void HelloVulkan::updateDescriptorSet()
     dbiVert.emplace_back(obj.vertexBuffer.buffer, 0, VK_WHOLE_SIZE);
     dbiIdx.emplace_back(obj.indexBuffer.buffer, 0, VK_WHOLE_SIZE);
   }
+#endif
 
   vk::DescriptorBufferInfo dbiHairs{m_hairsBuffer.buffer, 0, VK_WHOLE_SIZE};
   writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 9, &dbiHairs));
@@ -364,7 +366,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 #if 1
   m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   m_hairsAabbBuffer =
-      m_alloc.createBuffer(cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+      m_alloc.createBuffer(cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
   genCmdBuf.submitAndWait(cmdBuf);
 
   // Debug information
@@ -811,7 +813,7 @@ void HelloVulkan::createTopLevelAS()
 #if 1
   {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
-    //rayInst.transform        = m_objInstance[0].transform;          // Position of the instance
+    rayInst.transform        = nvmath::mat4f(1.0f);          // Position of the instance
     rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
     rayInst.blasId           = 0;
     rayInst.hitGroupId       = 0;  // We will use the same hit group for all objects

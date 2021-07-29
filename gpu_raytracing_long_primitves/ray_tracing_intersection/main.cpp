@@ -181,7 +181,7 @@ int main(int argc, char** argv)
  // helloVk.loadModel(nvh::findFile("media/scenes/plane.obj", defaultSearchPaths, true));
 
   cyHairFile myHairFile;
-  const char* filename = "C:/Users/redevran/Desktop/GPU-Ray-Tracing-Long-Primitives/vk_gpu_raytracing/media/scenes/dark.hair";
+  const char* filename = "../media/scenes/dark.hair";
   helloVk.loadHairModel(filename, myHairFile);
 	
   helloVk.createOffscreenRender();
