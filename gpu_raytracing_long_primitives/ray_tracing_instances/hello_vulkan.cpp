@@ -338,7 +338,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
           nvmath::vec3(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
           nvmath::vec3(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]),
           nvmath::vec3(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
-          nvmath::vec3(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]), 0.05f});
+          nvmath::vec3(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]), 0.03f});
     }
     pointIndex += (segments[i] + 1) * 3;
   }
@@ -353,16 +353,14 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2) * /*sqrt*/ (nvmath::vec3(1.0f) - nvmath::normalize(a));
     Aabb hairAabb{nvmath::nv_min(hair.p0 - extent, hair.p1 - extent), nvmath::nv_max(hair.p0 + extent, hair.p1 + extent)};
     hairAabbs.emplace_back(hairAabb);
-    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(cmdBuf, hairAabbs,
-                                             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                                             | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-    hairAabbs.clear();
   }
 #endif
 
 #if 1
   m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-
+  m_hairsAabbBuffer = m_alloc.createBuffer(cmdBuf, hairAabbs,
+                                                      VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+                                                      | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
   genCmdBuf.submitAndWait(cmdBuf);
 
   // Debug information
@@ -517,10 +515,7 @@ void HelloVulkan::destroyResources()
   vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
 
   m_alloc.destroy(m_hairsBuffer);
-  for (auto i : m_hairsAabbBuffer)
-  {
-    m_alloc.destroy(i);
-  }
+  m_alloc.destroy(m_hairsAabbBuffer);
 
   m_alloc.deinit();
 }
@@ -773,9 +768,9 @@ auto HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
 
 // Returning the ray tracing geometry used for the BLAS, containing all hairs
 //
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(int aabb_offset)
+nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 {
-  VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_hairsAabbBuffer[aabb_offset].buffer);
+  VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_hairsAabbBuffer.buffer);
 
   VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
   aabbs.data.deviceAddress = dataAddress;
@@ -787,17 +782,15 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(int aabb_
   asGeom.flags          = VK_GEOMETRY_OPAQUE_BIT_KHR;
   asGeom.geometry.aabbs = aabbs;
 
-  nvvk::RaytracingBuilderKHR::BlasInput input;
-
   VkAccelerationStructureBuildRangeInfoKHR offset{};
   offset.firstVertex     = 0;
-  offset.primitiveCount  = 1;
+  offset.primitiveCount  = (uint32_t)m_hairs.size();
   offset.primitiveOffset = 0;
   offset.transformOffset = 0;
 
+  nvvk::RaytracingBuilderKHR::BlasInput input;
   input.asGeometry.emplace_back(asGeom);
   input.asBuildOffsetInfo.emplace_back(offset);
-
   return input;
 }
 
@@ -816,11 +809,9 @@ void HelloVulkan::createBottomLevelAS()
     allBlas.emplace_back(blas);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 10; ++i)
-  {
-  auto blasHair = hairToVkGeometryKHR(i);
+
+  auto blasHair = hairToVkGeometryKHR();
     allBlas.emplace_back(blasHair);
-  }
 
   m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
@@ -840,7 +831,6 @@ void HelloVulkan::createTopLevelAS()
     tlas.emplace_back(rayInst);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 10; ++i)
   {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
     rayInst.transform =
