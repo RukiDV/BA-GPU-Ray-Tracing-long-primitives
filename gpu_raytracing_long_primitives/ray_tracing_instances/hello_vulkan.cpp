@@ -276,7 +276,6 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
 
 void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 {
-
   // Load the hair model
   int result = hairfile.LoadFromFile(filename);
   // Check for errors
@@ -322,7 +321,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
   nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
   VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
 
-#if 1
   std::vector<Aabb>     hairAabbs;
   int                   pointIndex = 0;
   float*                vertices   = hairfile.GetPointsArray();
@@ -342,32 +340,31 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     }
     pointIndex += (segments[i] + 1) * 3;
   }
-#endif
 
-#if 1
-  //Box for hair
+  //AABB Box for hair
 
-  for(const auto hair : m_hairs)
+  for(int i = 0; i < m_hairs.size(); ++i)
   {
+    // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
+    auto& hair = m_hairs[i];
+    m_transforms.push_back(
+        nvmath::mat4f({1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}));
     nvmath::vec3 a      = hair.p1 - hair.p0;
-    nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2) * /*sqrt*/ (nvmath::vec3(1.0f) - nvmath::normalize(a));
+    nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
     Aabb hairAabb{nvmath::nv_min(hair.p0 - extent, hair.p1 - extent), nvmath::nv_max(hair.p0 + extent, hair.p1 + extent)};
     hairAabbs.emplace_back(hairAabb);
-    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(cmdBuf, hairAabbs,
-                                             VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                                             | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
+    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(
+        cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
+
+    hair.p0 = m_transforms[i] * hair.p0;
+    hair.p1 = m_transforms[i] * hair.p1;
     hairAabbs.clear();
   }
-#endif
 
-#if 1
-  m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-
+  m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   genCmdBuf.submitAndWait(cmdBuf);
-
   // Debug information
   m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
-#endif
 }
 
 
@@ -517,7 +514,7 @@ void HelloVulkan::destroyResources()
   vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
 
   m_alloc.destroy(m_hairsBuffer);
-  for (auto i : m_hairsAabbBuffer)
+  for(auto i : m_hairsAabbBuffer)
   {
     m_alloc.destroy(i);
   }
@@ -816,9 +813,9 @@ void HelloVulkan::createBottomLevelAS()
     allBlas.emplace_back(blas);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 10; ++i)
+  for(int i = 0; i < m_hairs.size() / 500; ++i)
   {
-  auto blasHair = hairToVkGeometryKHR(i);
+    auto blasHair = hairToVkGeometryKHR(i);
     allBlas.emplace_back(blasHair);
   }
 
@@ -840,11 +837,12 @@ void HelloVulkan::createTopLevelAS()
     tlas.emplace_back(rayInst);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 10; ++i)
+  for(int i = 0; i < m_hairs.size() / 500; ++i)
   {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform =
-        nvmath::mat4f({1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // Position of the instance
+    rayInst.transform        = m_transforms[i];
+    m_hairs[i].p0            = rayInst.transform * m_hairs[i].p0;
+    m_hairs[i].p1            = rayInst.transform * m_hairs[i].p1;
     rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
     rayInst.blasId           = static_cast<uint32_t>(tlas.size());
     rayInst.hitGroupId       = 1;

@@ -187,7 +187,7 @@ public:
     nvmath::vec3 n1;
     // HairVertex v1;
     // HairVertex v2;
-    float        thickness;
+    float thickness;
   };
 
   struct HairVertex
@@ -205,8 +205,9 @@ public:
 
   nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR(int aabb_offset);
 
-  std::vector<Hair>              m_hairs;            // All hairs
-  nvvk::Buffer                   m_hairsBuffer;      // Buffer holding the hairs
-  std::vector<nvvk::Buffer>      m_hairsAabbBuffer;  // Buffer of all Aabbs
-  void                           loadHairModel(const char* filename, cyHairFile& hairfile);
+  std::vector<Hair>         m_hairs;            // All hairs
+  nvvk::Buffer              m_hairsBuffer;      // Buffer holding the hairs
+  std::vector<nvvk::Buffer> m_hairsAabbBuffer;  // Buffer of all Aabbs
+  void                      loadHairModel(const char* filename, cyHairFile& hairfile);
+  std::vector<nvmath::mat4f> m_transforms;
 };
