@@ -24,8 +24,7 @@ struct hitPayload
 
 struct Hair
 {
-  vec3 p0;
-  vec3  p1;
+  mat4 trans;
   vec3  c0;
   vec3  c1;
   vec3  n0;

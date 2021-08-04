@@ -35,14 +35,14 @@ hitAttributeEXT vec2 attribs;
 layout(location = 0) rayPayloadInEXT hitPayload prd;
 layout(location = 1) rayPayloadEXT bool isShadowed;
 
-layout(buffer_reference, scalar) buffer Vertices {Vertex v[]; }; // Positions of an object
-layout(buffer_reference, scalar) buffer Indices {ivec3 i[]; }; // Triangle indices
-layout(buffer_reference, scalar) buffer Materials {WaveFrontMaterial m[]; }; // Array of all materials on an object
-layout(buffer_reference, scalar) buffer MatIndices {int i[]; }; // Material ID for each triangle
+layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; };// Positions of an object
+layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; };// Triangle indices
+layout(buffer_reference, scalar) buffer Materials { WaveFrontMaterial m[]; };// Array of all materials on an object
+layout(buffer_reference, scalar) buffer MatIndices { int i[]; };// Material ID for each triangle
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 1, scalar) buffer SceneDesc_ { SceneDesc i[]; } sceneDesc;
 layout(binding = 2, set = 1) uniform sampler2D textureSamplers[];
-layout(binding = 3, set = 1, scalar, std140) buffer allHairs_ {Hair i[];} allHairs;
+layout(binding = 3, set = 1, scalar, std140) buffer allHairs_ { Hair i[]; } allHairs;
 // clang-format on
 
 layout(push_constant) uniform Constants

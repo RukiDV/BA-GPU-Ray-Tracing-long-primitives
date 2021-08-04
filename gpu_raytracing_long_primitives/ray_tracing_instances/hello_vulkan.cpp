@@ -330,10 +330,34 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
   {
     for(int j = 0; j < segments[i]; j++)
     {
+      nvmath::vec3 p0 =
+          nvmath::vec3(vertices[pointIndex + j * 3], vertices[pointIndex + 1 + j * 3], vertices[pointIndex + 2 + j * 3]) / 7.0f;
+      nvmath::vec3 p1 =
+          nvmath::vec3(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3], vertices[pointIndex + 5 + j * 3]) / 7.0f;
+
+      // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
+      float        scale = nvmath::length(p1 - p0);
+      float        x     = p0.x;
+      float        y     = p0.y;
+      float        z     = p0.z;
+      nvmath::vec3 unit  = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+      nvmath::vec3 dir   = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
+      nvmath::vec3 v     = nvmath::cross(unit, dir);
+      float        c     = nvmath::dot(unit, dir);
+      float        safe  = 1.0f / (1.0f + c);
+      // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+      // smashed into one big matrix because adding the single matrices didn't work
+      nvmath::mat4f trans =
+          nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z, v.x * v.z * safe - v.y, 0.0f,
+                        (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
+                        (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y, v.y * v.z * safe - v.x,
+                        (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
+
+
+      hairAabbs.clear();
+
       m_hairs.push_back(Hair{
-          nvmath::vec3f(vertices[pointIndex + j * 3], vertices[pointIndex + 1 + j * 3], vertices[pointIndex + 2 + j * 3]) / 7.0f,
-          nvmath::vec3f(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3], vertices[pointIndex + 5 + j * 3]) / 7.0f,
-          nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
+          trans, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
           nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]),
           nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
           nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]), 0.05f});
@@ -341,47 +365,14 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     pointIndex += (segments[i] + 1) * 3;
   }
 
-  //AABB Box for hair
-
-  for(int i = 0; i < m_hairs.size(); ++i)
-  {
-    // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
-    auto&        hair  = m_hairs[i];
-    float        scale = nvmath::length(hair.p1 - hair.p0);
-    float        x     = hair.p0.x;
-    float        y     = hair.p0.y;
-    float        z     = hair.p0.z;
-    nvmath::vec3 unit  = nvmath::vec3(0.0f, 1.0f, 0.0f); // unit cylinder
-    nvmath::vec3 dir   = nvmath::normalize(hair.p1 - hair.p0); // direction of segment that is currently calculated
-    nvmath::vec3 v     = nvmath::cross(unit, dir);
-    float        c     = nvmath::dot(unit, dir);
-    float        safe  = 1.0f / (1.0f + c);
-    // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
-    // smashed into one big matrix because adding the single matrices didn't work
-    nvmath::mat4f trans =
-        nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z, v.x * v.z * safe - v.y, 0.0f,
-                      (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
-                      (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y, v.y * v.z * safe - v.x,
-                      (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
-    m_transforms.push_back(trans);
-
-    hair.p0             = nvmath::vec3(0.0f, 0.0f, 0.0f);
-    hair.p1             = nvmath::vec3(0.0f, 1.0f, 0.0f);
-    nvmath::vec3 a      = hair.p1 - hair.p0;
-    nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
-    Aabb hairAabb{nvmath::nv_min(hair.p0 - extent, hair.p1 - extent), nvmath::nv_max(hair.p0 + extent, hair.p1 + extent)};
-    hairAabbs.emplace_back(hairAabb);
-    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(
-        cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
-
-    nvmath::vec4f x0 = nvmath::vec4(hair.p0, 1.0f);
-    nvmath::vec4f x1 = nvmath::vec4(hair.p1, 1.0f);
-    x0               = (m_transforms[i] * x0);
-    x1               = (m_transforms[i] * x1);
-    hair.p0          = x0 / x0.w;
-    hair.p1          = x1 / x1.w;
-    hairAabbs.clear();
-  }
+  nvmath::vec3 p0     = nvmath::vec3(0.0f, 0.0f, 0.0f);
+  nvmath::vec3 p1     = nvmath::vec3(0.0f, 1.0f, 0.0f);
+  nvmath::vec3 a      = p1 - p0;
+  nvmath::vec3 extent = nvmath::vec3(0.05f / 2.0f) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
+  Aabb         hairAabb{nvmath::nv_min(p0 - extent, p1 - extent), nvmath::nv_max(p0 + extent, p1 + extent)};
+  hairAabbs.emplace_back(hairAabb);
+  m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(
+      cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
 
   m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   genCmdBuf.submitAndWait(cmdBuf);
@@ -792,9 +783,9 @@ auto HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
 
 // Returning the ray tracing geometry used for the BLAS, containing all hairs
 //
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(int aabb_offset)
+nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 {
-  VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_hairsAabbBuffer[aabb_offset].buffer);
+  VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_hairsAabbBuffer[0].buffer);
 
   VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
   aabbs.data.deviceAddress = dataAddress;
@@ -835,11 +826,8 @@ void HelloVulkan::createBottomLevelAS()
     allBlas.emplace_back(blas);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 500; ++i)
-  {
-    auto blasHair = hairToVkGeometryKHR(i);
-    allBlas.emplace_back(blasHair);
-  }
+  auto blasHair = hairToVkGeometryKHR();
+  allBlas.emplace_back(blasHair);
 
   m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
@@ -859,14 +847,12 @@ void HelloVulkan::createTopLevelAS()
     tlas.emplace_back(rayInst);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size() / 500; ++i)
+  for(int i = 0; i < m_hairs.size(); ++i)
   {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_transforms[i];
-    m_hairs[i].p0            = rayInst.transform * m_hairs[i].p0;
-    m_hairs[i].p1            = rayInst.transform * m_hairs[i].p1;
+    rayInst.transform        = m_hairs[i].trans;
     rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = static_cast<uint32_t>(tlas.size());
+    rayInst.blasId           = 0;
     rayInst.hitGroupId       = 1;
     rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     tlas.emplace_back(rayInst);
