@@ -312,7 +312,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
   int pointCount = (hairfile.GetHeader().point_count);
   printf("Number of hair strands = %d\n", hairCount);
   printf("Number of hair points = %d\n", pointCount);
-  float* dirs = new float[3807654];
+  float* dirs = new float[pointCount * 3];
   // Compute directions
   if(hairfile.FillDirectionArray(dirs) == 0)
   {
