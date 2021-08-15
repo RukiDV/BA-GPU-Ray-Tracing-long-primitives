@@ -21,7 +21,6 @@
 #include <sstream>
 #include <random>
 
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "obj_loader.h"
 #include "stb_image.h"
@@ -42,28 +41,27 @@
 
 extern std::vector<std::string> defaultSearchPaths;
 
-
 // Holding the camera matrices
 struct CameraMatrices
 {
-  nvmath::mat4f view;
-  nvmath::mat4f proj;
-  nvmath::mat4f viewInverse;
-  // #VKRay
-  nvmath::mat4f projInverse;
+    nvmath::mat4f view;
+    nvmath::mat4f proj;
+    nvmath::mat4f viewInverse;
+    // #VKRay
+    nvmath::mat4f projInverse;
 };
-
 
 //--------------------------------------------------------------------------------------------------
 // Keep the handle on the device
 // Initialize the tool to do all our allocations: buffers, images
 //
-void HelloVulkan::setup(const VkInstance& instance, const VkDevice& device, const VkPhysicalDevice& physicalDevice, uint32_t queueFamily)
+void HelloVulkan::setup(const VkInstance& instance, const VkDevice& device, const VkPhysicalDevice& physicalDevice,
+                        uint32_t queueFamily)
 {
-  AppBaseVk::setup(instance, device, physicalDevice, queueFamily);
-  m_alloc.init(instance, device, physicalDevice);
-  m_debug.setup(m_device);
-  m_offscreenDepthFormat = nvvk::findDepthFormat(physicalDevice);
+    AppBaseVk::setup(instance, device, physicalDevice, queueFamily);
+    m_alloc.init(instance, device, physicalDevice);
+    m_debug.setup(m_device);
+    m_offscreenDepthFormat = nvvk::findDepthFormat(physicalDevice);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -71,44 +69,44 @@ void HelloVulkan::setup(const VkInstance& instance, const VkDevice& device, cons
 //
 void HelloVulkan::updateUniformBuffer(const VkCommandBuffer& cmdBuf)
 {
-  // Prepare new UBO contents on host.
-  const float    aspectRatio = m_size.width / static_cast<float>(m_size.height);
-  CameraMatrices hostUBO     = {};
-  hostUBO.view               = CameraManip.getMatrix();
-  hostUBO.proj               = nvmath::perspectiveVK(CameraManip.getFov(), aspectRatio, 0.1f, 1000.0f);
-  // hostUBO.proj[1][1] *= -1;  // Inverting Y for Vulkan (not needed with perspectiveVK).
-  hostUBO.viewInverse = nvmath::invert(hostUBO.view);
-  // #VKRay
-  hostUBO.projInverse = nvmath::invert(hostUBO.proj);
+    // Prepare new UBO contents on host.
+    const float aspectRatio = m_size.width / static_cast<float>(m_size.height);
+    CameraMatrices hostUBO = {};
+    hostUBO.view = CameraManip.getMatrix();
+    hostUBO.proj = nvmath::perspectiveVK(CameraManip.getFov(), aspectRatio, 0.1f, 1000.0f);
+    // hostUBO.proj[1][1] *= -1;  // Inverting Y for Vulkan (not needed with perspectiveVK).
+    hostUBO.viewInverse = nvmath::invert(hostUBO.view);
+    // #VKRay
+    hostUBO.projInverse = nvmath::invert(hostUBO.proj);
 
-  // UBO on the device, and what stages access it.
-  VkBuffer deviceUBO      = m_cameraMat.buffer;
-  auto     uboUsageStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+    // UBO on the device, and what stages access it.
+    VkBuffer deviceUBO = m_cameraMat.buffer;
+    auto uboUsageStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 
-  // Ensure that the modified UBO is not visible to previous frames.
-  VkBufferMemoryBarrier beforeBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-  beforeBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-  beforeBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  beforeBarrier.buffer        = deviceUBO;
-  beforeBarrier.offset        = 0;
-  beforeBarrier.size          = sizeof(hostUBO);
-  vkCmdPipelineBarrier(cmdBuf, uboUsageStages, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_DEVICE_GROUP_BIT, 0,
-                       nullptr, 1, &beforeBarrier, 0, nullptr);
+    // Ensure that the modified UBO is not visible to previous frames.
+    VkBufferMemoryBarrier beforeBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    beforeBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    beforeBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    beforeBarrier.buffer = deviceUBO;
+    beforeBarrier.offset = 0;
+    beforeBarrier.size = sizeof(hostUBO);
+    vkCmdPipelineBarrier(cmdBuf, uboUsageStages, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_DEVICE_GROUP_BIT, 0,
+                         nullptr, 1, &beforeBarrier, 0, nullptr);
 
 
-  // Schedule the host-to-device upload. (hostUBO is copied into the cmd
-  // buffer so it is okay to deallocate when the function returns).
-  vkCmdUpdateBuffer(cmdBuf, m_cameraMat.buffer, 0, sizeof(CameraMatrices), &hostUBO);
+    // Schedule the host-to-device upload. (hostUBO is copied into the cmd
+    // buffer so it is okay to deallocate when the function returns).
+    vkCmdUpdateBuffer(cmdBuf, m_cameraMat.buffer, 0, sizeof(CameraMatrices), &hostUBO);
 
-  // Making sure the updated UBO will be visible.
-  VkBufferMemoryBarrier afterBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-  afterBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  afterBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-  afterBarrier.buffer        = deviceUBO;
-  afterBarrier.offset        = 0;
-  afterBarrier.size          = sizeof(hostUBO);
-  vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_TRANSFER_BIT, uboUsageStages, VK_DEPENDENCY_DEVICE_GROUP_BIT, 0,
-                       nullptr, 1, &afterBarrier, 0, nullptr);
+    // Making sure the updated UBO will be visible.
+    VkBufferMemoryBarrier afterBarrier{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
+    afterBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    afterBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    afterBarrier.buffer = deviceUBO;
+    afterBarrier.offset = 0;
+    afterBarrier.size = sizeof(hostUBO);
+    vkCmdPipelineBarrier(cmdBuf, VK_PIPELINE_STAGE_TRANSFER_BIT, uboUsageStages, VK_DEPENDENCY_DEVICE_GROUP_BIT, 0,
+                         nullptr, 1, &afterBarrier, 0, nullptr);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -116,25 +114,30 @@ void HelloVulkan::updateUniformBuffer(const VkCommandBuffer& cmdBuf)
 //
 void HelloVulkan::createDescriptorSetLayout()
 {
-  auto nbTxt = static_cast<uint32_t>(m_textures.size());
+    auto nbTxt = static_cast<uint32_t>(m_textures.size());
 
-  // Camera matrices (binding = 0)
-  m_descSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-  // Scene description (binding = 1)
-  m_descSetLayoutBind.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
-                                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
-  // Textures (binding = 2)
-  m_descSetLayoutBind.addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nbTxt,
-                                 VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    // Camera matrices (binding = 0)
+    m_descSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+    // Scene description (binding = 1)
+    m_descSetLayoutBind.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT |
+                                   VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+    // Textures (binding = 2)
+    m_descSetLayoutBind.addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, nbTxt,
+                                   VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 
-  // Storing hairs (binding = 3)
-  m_descSetLayoutBind.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
-                                 VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_NV);
+    // Storing hairs (binding = 3)
+    m_descSetLayoutBind.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
+                                   VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_NV);
 
+    // Storing clusters (binding = 4)
+    m_descSetLayoutBind.addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
+                                   VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_NV);
 
-  m_descSetLayout = m_descSetLayoutBind.createLayout(m_device);
-  m_descPool      = m_descSetLayoutBind.createPool(m_device, 1);
-  m_descSet       = nvvk::allocateDescriptorSet(m_device, m_descPool, m_descSetLayout);
+    m_descSetLayout = m_descSetLayoutBind.createLayout(m_device);
+    m_descPool = m_descSetLayoutBind.createPool(m_device, 1);
+    m_descSet = nvvk::allocateDescriptorSet(m_device, m_descPool, m_descSetLayout);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -142,63 +145,70 @@ void HelloVulkan::createDescriptorSetLayout()
 //
 void HelloVulkan::updateDescriptorSet()
 {
-  std::vector<VkWriteDescriptorSet> writes;
+    std::vector<VkWriteDescriptorSet> writes;
 
-  // Camera matrices and scene description
-  VkDescriptorBufferInfo dbiUnif{m_cameraMat.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 0, &dbiUnif));
+    // Camera matrices and scene description
+    VkDescriptorBufferInfo dbiUnif{m_cameraMat.buffer, 0, VK_WHOLE_SIZE};
+    writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 0, &dbiUnif));
 
-  VkDescriptorBufferInfo dbiSceneDesc{m_sceneDesc.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 1, &dbiSceneDesc));
+    VkDescriptorBufferInfo dbiSceneDesc{m_sceneDesc.buffer, 0, VK_WHOLE_SIZE};
+    writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 1, &dbiSceneDesc));
 
-  // All texture samplers
-  std::vector<VkDescriptorImageInfo> diit;
-  for(auto& texture : m_textures)
-  {
-    diit.emplace_back(texture.descriptor);
-  }
-  writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 2, diit.data()));
+    // All texture samplers
+    std::vector<VkDescriptorImageInfo> diit;
+    for (auto& texture : m_textures)
+    {
+        diit.emplace_back(texture.descriptor);
+    }
+    writes.emplace_back(m_descSetLayoutBind.makeWriteArray(m_descSet, 2, diit.data()));
 
-  VkDescriptorBufferInfo dbiHairs{m_hairsBuffer.buffer, 0, VK_WHOLE_SIZE};
-  writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 3, &dbiHairs));
+    VkDescriptorBufferInfo dbiHairs{m_hairsBuffer.buffer, 0, VK_WHOLE_SIZE};
+    writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 3, &dbiHairs));
 
-  // Writing the information
-  vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    VkDescriptorBufferInfo dbiClusters{m_clustersBuffer.buffer, 0, VK_WHOLE_SIZE};
+    writes.emplace_back(m_descSetLayoutBind.makeWrite(m_descSet, 4, &dbiClusters));
+
+    // Writing the information
+    vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
-
 
 //--------------------------------------------------------------------------------------------------
 // Creating the pipeline layout
 //
 void HelloVulkan::createGraphicsPipeline()
 {
-  VkPushConstantRange pushConstantRanges = {VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjPushConstant)};
+    VkPushConstantRange pushConstantRanges = {VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                                              sizeof(ObjPushConstant)};
 
-  // Creating the Pipeline Layout
-  VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-  createInfo.setLayoutCount         = 1;
-  createInfo.pSetLayouts            = &m_descSetLayout;
-  createInfo.pushConstantRangeCount = 1;
-  createInfo.pPushConstantRanges    = &pushConstantRanges;
-  vkCreatePipelineLayout(m_device, &createInfo, nullptr, &m_pipelineLayout);
+    // Creating the Pipeline Layout
+    VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    createInfo.setLayoutCount = 1;
+    createInfo.pSetLayouts = &m_descSetLayout;
+    createInfo.pushConstantRangeCount = 1;
+    createInfo.pPushConstantRanges = &pushConstantRanges;
+    vkCreatePipelineLayout(m_device, &createInfo, nullptr, &m_pipelineLayout);
 
 
-  // Creating the Pipeline
-  std::vector<std::string>                paths = defaultSearchPaths;
-  nvvk::GraphicsPipelineGeneratorCombined gpb(m_device, m_pipelineLayout, m_offscreenRenderPass);
-  gpb.depthStencilState.depthTestEnable = true;
-  gpb.addShader(nvh::loadFile("spv/vert_shader.vert.spv", true, paths, true), VK_SHADER_STAGE_VERTEX_BIT);
-  gpb.addShader(nvh::loadFile("spv/frag_shader.frag.spv", true, paths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
-  gpb.addBindingDescription({0, sizeof(VertexObj)});
-  gpb.addAttributeDescriptions({
-      {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, pos))},
-      {1, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, nrm))},
-      {2, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, color))},
-      {3, 0, VK_FORMAT_R32G32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj, texCoord))},
-  });
+    // Creating the Pipeline
+    std::vector<std::string> paths = defaultSearchPaths;
+    nvvk::GraphicsPipelineGeneratorCombined gpb(m_device, m_pipelineLayout, m_offscreenRenderPass);
+    gpb.depthStencilState.depthTestEnable = true;
+    gpb.addShader(nvh::loadFile("spv/vert_shader.vert.spv", true, paths, true), VK_SHADER_STAGE_VERTEX_BIT);
+    gpb.addShader(nvh::loadFile("spv/frag_shader.frag.spv", true, paths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
+    gpb.addBindingDescription({0, sizeof(VertexObj)});
+    gpb.addAttributeDescriptions({
+                                         {0, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj,
+                                                                                                           pos))},
+                                         {1, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj,
+                                                                                                           nrm))},
+                                         {2, 0, VK_FORMAT_R32G32B32_SFLOAT, static_cast<uint32_t>(offsetof(VertexObj,
+                                                                                                           color))},
+                                         {3, 0, VK_FORMAT_R32G32_SFLOAT,    static_cast<uint32_t>(offsetof(VertexObj,
+                                                                                                           texCoord))},
+                                 });
 
-  m_graphicsPipeline = gpb.createPipeline();
-  m_debug.setObjectName(m_graphicsPipeline, "Graphics");
+    m_graphicsPipeline = gpb.createPipeline();
+    m_debug.setObjectName(m_graphicsPipeline, "Graphics");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -206,180 +216,170 @@ void HelloVulkan::createGraphicsPipeline()
 //
 void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform)
 {
-  LOGI("Loading File:  %s \n", filename.c_str());
-  ObjLoader loader;
-  loader.loadModel(filename);
+    LOGI("Loading File:  %s \n", filename.c_str());
+    ObjLoader loader;
+    loader.loadModel(filename);
 
-  // Converting from Srgb to linear
-  for(auto& m : loader.m_materials)
-  {
-    m.ambient  = nvmath::pow(m.ambient, 2.2f);
-    m.diffuse  = nvmath::pow(m.diffuse, 2.2f);
-    m.specular = nvmath::pow(m.specular, 2.2f);
-  }
+    // Converting from Srgb to linear
+    for (auto& m : loader.m_materials)
+    {
+        m.ambient = nvmath::pow(m.ambient, 2.2f);
+        m.diffuse = nvmath::pow(m.diffuse, 2.2f);
+        m.specular = nvmath::pow(m.specular, 2.2f);
+    }
 
-  ObjModel model;
-  model.nbIndices  = static_cast<uint32_t>(loader.m_indices.size());
-  model.nbVertices = static_cast<uint32_t>(loader.m_vertices.size());
+    ObjModel model;
+    model.nbIndices = static_cast<uint32_t>(loader.m_indices.size());
+    model.nbVertices = static_cast<uint32_t>(loader.m_vertices.size());
 
-  // Create the buffers on Device and copy vertices, indices and materials
-  nvvk::CommandPool  cmdBufGet(m_device, m_graphicsQueueIndex);
-  VkCommandBuffer    cmdBuf          = cmdBufGet.createCommandBuffer();
-  VkBufferUsageFlags flag            = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-  VkBufferUsageFlags rayTracingFlags =  // used also for building acceleration structures
-      flag | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-  model.vertexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_vertices, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | rayTracingFlags);
-  model.indexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_indices, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | rayTracingFlags);
-  model.matColorBuffer = m_alloc.createBuffer(cmdBuf, loader.m_materials, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
-  model.matIndexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_matIndx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
-  // Creates all textures found
-  uint32_t txtOffset = static_cast<uint32_t>(m_textures.size());
-  createTextureImages(cmdBuf, loader.m_textures);
-  cmdBufGet.submitAndWait(cmdBuf);
-  m_alloc.finalizeAndReleaseStaging();
+    // Create the buffers on Device and copy vertices, indices and materials
+    nvvk::CommandPool cmdBufGet(m_device, m_graphicsQueueIndex);
+    VkCommandBuffer cmdBuf = cmdBufGet.createCommandBuffer();
+    VkBufferUsageFlags flag = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    VkBufferUsageFlags rayTracingFlags =  // used also for building acceleration structures
+            flag | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    model.vertexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_vertices,
+                                              VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | rayTracingFlags);
+    model.indexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_indices,
+                                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT | rayTracingFlags);
+    model.matColorBuffer = m_alloc.createBuffer(cmdBuf, loader.m_materials, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
+    model.matIndexBuffer = m_alloc.createBuffer(cmdBuf, loader.m_matIndx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | flag);
+    // Creates all textures found
+    uint32_t txtOffset = static_cast<uint32_t>(m_textures.size());
+    createTextureImages(cmdBuf, loader.m_textures);
+    cmdBufGet.submitAndWait(cmdBuf);
+    m_alloc.finalizeAndReleaseStaging();
 
-  std::string objNb = std::to_string(m_objModel.size());
-  m_debug.setObjectName(model.vertexBuffer.buffer, (std::string("vertex_" + objNb).c_str()));
-  m_debug.setObjectName(model.indexBuffer.buffer, (std::string("index_" + objNb).c_str()));
-  m_debug.setObjectName(model.matColorBuffer.buffer, (std::string("mat_" + objNb).c_str()));
-  m_debug.setObjectName(model.matIndexBuffer.buffer, (std::string("matIdx_" + objNb).c_str()));
+    std::string objNb = std::to_string(m_objModel.size());
+    m_debug.setObjectName(model.vertexBuffer.buffer, (std::string("vertex_" + objNb).c_str()));
+    m_debug.setObjectName(model.indexBuffer.buffer, (std::string("index_" + objNb).c_str()));
+    m_debug.setObjectName(model.matColorBuffer.buffer, (std::string("mat_" + objNb).c_str()));
+    m_debug.setObjectName(model.matIndexBuffer.buffer, (std::string("matIdx_" + objNb).c_str()));
 
-  ObjInstance instance;
-  instance.objIndex        = static_cast<uint32_t>(m_objModel.size());
-  instance.transform       = transform;
-  instance.transformIT     = nvmath::transpose(nvmath::invert(transform));
-  instance.txtOffset       = txtOffset;
-  instance.vertices        = nvvk::getBufferDeviceAddress(m_device, model.vertexBuffer.buffer);
-  instance.indices         = nvvk::getBufferDeviceAddress(m_device, model.indexBuffer.buffer);
-  instance.materials       = nvvk::getBufferDeviceAddress(m_device, model.matColorBuffer.buffer);
-  instance.materialIndices = nvvk::getBufferDeviceAddress(m_device, model.matIndexBuffer.buffer);
+    ObjInstance instance;
+    instance.objIndex = static_cast<uint32_t>(m_objModel.size());
+    instance.transform = transform;
+    instance.transformIT = nvmath::transpose(nvmath::invert(transform));
+    instance.txtOffset = txtOffset;
+    instance.vertices = nvvk::getBufferDeviceAddress(m_device, model.vertexBuffer.buffer);
+    instance.indices = nvvk::getBufferDeviceAddress(m_device, model.indexBuffer.buffer);
+    instance.materials = nvvk::getBufferDeviceAddress(m_device, model.matColorBuffer.buffer);
+    instance.materialIndices = nvvk::getBufferDeviceAddress(m_device, model.matIndexBuffer.buffer);
 
-  m_objModel.emplace_back(model);
+    m_objModel.emplace_back(model);
 
-  for(int i = 0; i < 2000; i++)
-  {
-    std::random_device              rd;         //Will be used to obtain a seed for the random number engine
-    std::mt19937                    gen(rd());  //Standard mersenne_twister_engine seeded with rd()
-    std::normal_distribution<float> dis(1.0f, 1.0f);
-    std::normal_distribution<float> disn(0.05f, 0.05f);
+    for (int i = 0; i < 2000; i++)
+    {
+        std::random_device rd;         //Will be used to obtain a seed for the random number engine
+        std::mt19937 gen(rd());  //Standard mersenne_twister_engine seeded with rd()
+        std::normal_distribution<float> dis(1.0f, 1.0f);
+        std::normal_distribution<float> disn(0.05f, 0.05f);
 
-    float         scale  = fabsf(disn(gen));
-    nvmath::mat4f mat    = nvmath::translation_mat4(nvmath::vec3f{dis(gen), 2.0f + dis(gen), dis(gen)});
-    mat                  = mat * nvmath::rotation_mat4_x(dis(gen));
-    mat                  = mat * nvmath::scale_mat4(nvmath::vec3f(scale));
-    instance.transform   = mat;
-    instance.transformIT = nvmath::transpose(nvmath::invert((instance.transform)));
+        float scale = fabsf(disn(gen));
+        nvmath::mat4f mat = nvmath::translation_mat4(nvmath::vec3f{dis(gen), 2.0f + dis(gen), dis(gen)});
+        mat = mat * nvmath::rotation_mat4_x(dis(gen));
+        mat = mat * nvmath::scale_mat4(nvmath::vec3f(scale));
+        instance.transform = mat;
+        instance.transformIT = nvmath::transpose(nvmath::invert((instance.transform)));
 
-    m_objInstance.emplace_back(instance);
-  }
+        m_objInstance.emplace_back(instance);
+    }
 }
 
 void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 {
-  // Load the hair model
-  int result = hairfile.LoadFromFile(filename);
-  // Check for errors
-  switch(result)
-  {
-    case CY_HAIR_FILE_ERROR_CANT_OPEN_FILE:
-      printf("Error: Cannot open hair file!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_CANT_READ_HEADER:
-      printf("Error: Cannot read hair file header!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_WRONG_SIGNATURE:
-      printf("Error: File has wrong signature!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_READING_SEGMENTS:
-      printf("Error: Cannot read hair segments!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_READING_POINTS:
-      printf("Error: Cannot read hair points!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_READING_COLORS:
-      printf("Error: Cannot read hair colors!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_READING_THICKNESS:
-      printf("Error: Cannot read hair thickness!\n");
-      return;
-    case CY_HAIR_FILE_ERROR_READING_TRANSPARENCY:
-      printf("Error: Cannot read hair transparency!\n");
-      return;
-    default:
-      printf("Hair file \"%s\" loaded.\n", filename);
-  }
-  int hairCount  = (hairfile.GetHeader().hair_count);
-  int pointCount = (hairfile.GetHeader().point_count);
-  printf("Number of hair strands = %d\n", hairCount);
-  printf("Number of hair points = %d\n", pointCount);
-  float* dirs = new float[3807654];
-  // Compute directions
-  if(hairfile.FillDirectionArray(dirs) == 0)
-  {
-    printf("Error: Cannot compute hair directions!\n");
-  }
-  nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-  VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
-
-  std::vector<Aabb>     hairAabbs;
-  int                   pointIndex = 0;
-  float*                vertices   = hairfile.GetPointsArray();
-  float*                colors     = hairfile.GetColorsArray();
-  const unsigned short* segments   = hairfile.GetSegmentsArray();
-  for(int i = 0; i < hairCount; i++)
-  {
-    for(int j = 0; j < segments[i]; j++)
+    // Load the hair model
+    int result = hairfile.LoadFromFile(filename);
+    // Check for errors
+    switch (result)
     {
-      nvmath::vec3 p0 =
-          nvmath::vec3(vertices[pointIndex + j * 3], vertices[pointIndex + 1 + j * 3], vertices[pointIndex + 2 + j * 3]) / 7.0f;
-      nvmath::vec3 p1 =
-          nvmath::vec3(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3], vertices[pointIndex + 5 + j * 3]) / 7.0f;
-
-      // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
-      float        scale = nvmath::length(p1 - p0);
-      float        x     = p0.x;
-      float        y     = p0.y;
-      float        z     = p0.z;
-      nvmath::vec3 unit  = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
-      nvmath::vec3 dir   = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
-      nvmath::vec3 v     = nvmath::cross(unit, dir);
-      float        c     = nvmath::dot(unit, dir);
-      float        safe  = 1.0f / (1.0f + c);
-      // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
-      // smashed into one big matrix because adding the single matrices didn't work
-      nvmath::mat4f trans =
-          nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z, v.x * v.z * safe - v.y, 0.0f,
-                        (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
-                        (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y, v.y * v.z * safe - v.x,
-                        (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
-
-
-      hairAabbs.clear();
-
-      m_hairs.push_back(Hair{
-          trans, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
-          nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]),
-          nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
-          nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]), 0.05f});
+        case CY_HAIR_FILE_ERROR_CANT_OPEN_FILE:
+            printf("Error: Cannot open hair file!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_CANT_READ_HEADER:
+            printf("Error: Cannot read hair file header!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_WRONG_SIGNATURE:
+            printf("Error: File has wrong signature!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_READING_SEGMENTS:
+            printf("Error: Cannot read hair segments!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_READING_POINTS:
+            printf("Error: Cannot read hair points!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_READING_COLORS:
+            printf("Error: Cannot read hair colors!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_READING_THICKNESS:
+            printf("Error: Cannot read hair thickness!\n");
+            return;
+        case CY_HAIR_FILE_ERROR_READING_TRANSPARENCY:
+            printf("Error: Cannot read hair transparency!\n");
+            return;
+        default:
+            printf("Hair file \"%s\" loaded.\n", filename);
     }
-    pointIndex += (segments[i] + 1) * 3;
-  }
+    uint32_t hairCount = hairfile.GetHeader().hair_count;
+    uint32_t pointCount = hairfile.GetHeader().point_count;
+    printf("Number of hair strands = %d\n", hairCount);
+    printf("Number of hair points = %d\n", pointCount);
+    float* dirs = new float[pointCount * 3];
+    // Compute directions
+    if (hairfile.FillDirectionArray(dirs) == 0)
+    {
+        printf("Error: Cannot compute hair directions!\n");
+    }
 
-  nvmath::vec3 p0     = nvmath::vec3(0.0f, 0.0f, 0.0f);
-  nvmath::vec3 p1     = nvmath::vec3(0.0f, 1.0f, 0.0f);
-  nvmath::vec3 a      = p1 - p0;
-  nvmath::vec3 extent = nvmath::vec3(0.05f / 2.0f) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
-  Aabb         hairAabb{nvmath::nv_min(p0 - extent, p1 - extent), nvmath::nv_max(p0 + extent, p1 + extent)};
-  hairAabbs.emplace_back(hairAabb);
-  m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(
-      cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
+    std::vector<Aabb> hairAabbs;
+    int pointIndex = 0;
+    float* vertices = hairfile.GetPointsArray();
+    float* colors = hairfile.GetColorsArray();
+    const unsigned short* segments = hairfile.GetSegmentsArray();
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        for (uint32_t j = 0; j < segments[i]; j++)
+        {
+            nvmath::vec3 p0 =
+                    nvmath::vec3(vertices[pointIndex + j * 3], vertices[pointIndex + 1 + j * 3],
+                                 vertices[pointIndex + 2 + j * 3]) / 7.0f;
+            nvmath::vec3 p1 =
+                    nvmath::vec3(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3],
+                                 vertices[pointIndex + 5 + j * 3]) / 7.0f;
 
-  m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  genCmdBuf.submitAndWait(cmdBuf);
-  // Debug information
-  m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
+            float scale = nvmath::length(p1 - p0);
+            float x = p0.x;
+            float y = p0.y;
+            float z = p0.z;
+            nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+            nvmath::vec3 dir = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
+            nvmath::vec3 v = nvmath::cross(unit, dir);
+            float c = nvmath::dot(unit, dir);
+            float safe = 1.0f / (1.0f + c);
+            // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+            // smashed into one big matrix because adding the single matrices didn't work
+            nvmath::mat4f trans =
+                    nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
+                                  v.x * v.z * safe - v.y, 0.0f,
+                                  (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
+                                  (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y,
+                                  v.y * v.z * safe - v.x,
+                                  (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
+
+            m_hairs.push_back(Hair{
+                    p0, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3],
+                                      colors[pointIndex + 2 + j * 3]),
+                    nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
+                    p1,
+                    nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3],
+                                  colors[pointIndex + 5 + j * 3]),
+                    nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3],
+                                  dirs[pointIndex + 5 + j * 3]), 0.05f});
+        }
+        pointIndex += (segments[i] + 1) * 3;
+    }
 }
-
 
 //--------------------------------------------------------------------------------------------------
 // Creating the uniform buffer holding the camera matrices
@@ -387,9 +387,10 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 //
 void HelloVulkan::createUniformBuffer()
 {
-  m_cameraMat = m_alloc.createBuffer(sizeof(CameraMatrices), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  m_debug.setObjectName(m_cameraMat.buffer, "cameraMat");
+    m_cameraMat = m_alloc.createBuffer(sizeof(CameraMatrices),
+                                       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_debug.setObjectName(m_cameraMat.buffer, "cameraMat");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -400,13 +401,13 @@ void HelloVulkan::createUniformBuffer()
 //
 void HelloVulkan::createSceneDescriptionBuffer()
 {
-  nvvk::CommandPool cmdGen(m_device, m_graphicsQueueIndex);
+    nvvk::CommandPool cmdGen(m_device, m_graphicsQueueIndex);
 
-  auto cmdBuf = cmdGen.createCommandBuffer();
-  m_sceneDesc = m_alloc.createBuffer(cmdBuf, m_objInstance, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  cmdGen.submitAndWait(cmdBuf);
-  m_alloc.finalizeAndReleaseStaging();
-  m_debug.setObjectName(m_sceneDesc.buffer, "sceneDesc");
+    auto cmdBuf = cmdGen.createCommandBuffer();
+    m_sceneDesc = m_alloc.createBuffer(cmdBuf, m_objInstance, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    cmdGen.submitAndWait(cmdBuf);
+    m_alloc.finalizeAndReleaseStaging();
+    m_debug.setObjectName(m_sceneDesc.buffer, "sceneDesc");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -414,72 +415,73 @@ void HelloVulkan::createSceneDescriptionBuffer()
 //
 void HelloVulkan::createTextureImages(const VkCommandBuffer& cmdBuf, const std::vector<std::string>& textures)
 {
-  VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-  samplerCreateInfo.minFilter  = VK_FILTER_LINEAR;
-  samplerCreateInfo.magFilter  = VK_FILTER_LINEAR;
-  samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerCreateInfo.maxLod     = FLT_MAX;
+    VkSamplerCreateInfo samplerCreateInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreateInfo.maxLod = FLT_MAX;
 
-  VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
-  // If no textures are present, create a dummy one to accommodate the pipeline layout
-  if(textures.empty() && m_textures.empty())
-  {
-    nvvk::Texture texture;
-
-    std::array<uint8_t, 4> color{255u, 255u, 255u, 255u};
-    VkDeviceSize           bufferSize      = sizeof(color);
-    auto                   imgSize         = VkExtent2D{1, 1};
-    auto                   imageCreateInfo = nvvk::makeImage2DCreateInfo(imgSize, format);
-
-    // Creating the dummy texture
-    nvvk::Image           image  = m_alloc.createImage(cmdBuf, bufferSize, color.data(), imageCreateInfo);
-    VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
-    texture                      = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
-
-    // The image format must be in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    nvvk::cmdBarrierImageLayout(cmdBuf, texture.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    m_textures.push_back(texture);
-  }
-  else
-  {
-    // Uploading all images
-    for(const auto& texture : textures)
+    // If no textures are present, create a dummy one to accommodate the pipeline layout
+    if (textures.empty() && m_textures.empty())
     {
-      std::stringstream o;
-      int               texWidth, texHeight, texChannels;
-      o << "media/textures/" << texture;
-      std::string txtFile = nvh::findFile(o.str(), defaultSearchPaths, true);
+        nvvk::Texture texture;
 
-      stbi_uc* stbi_pixels = stbi_load(txtFile.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        std::array<uint8_t, 4> color{255u, 255u, 255u, 255u};
+        VkDeviceSize bufferSize = sizeof(color);
+        auto imgSize = VkExtent2D{1, 1};
+        auto imageCreateInfo = nvvk::makeImage2DCreateInfo(imgSize, format);
 
-      std::array<stbi_uc, 4> color{255u, 0u, 255u, 255u};
+        // Creating the dummy texture
+        nvvk::Image image = m_alloc.createImage(cmdBuf, bufferSize, color.data(), imageCreateInfo);
+        VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
+        texture = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
 
-      stbi_uc* pixels = stbi_pixels;
-      // Handle failure
-      if(!stbi_pixels)
-      {
-        texWidth = texHeight = 1;
-        texChannels          = 4;
-        pixels               = reinterpret_cast<stbi_uc*>(color.data());
-      }
-
-      VkDeviceSize bufferSize      = static_cast<uint64_t>(texWidth) * texHeight * sizeof(uint8_t) * 4;
-      auto         imgSize         = VkExtent2D{(uint32_t)texWidth, (uint32_t)texHeight};
-      auto         imageCreateInfo = nvvk::makeImage2DCreateInfo(imgSize, format, VK_IMAGE_USAGE_SAMPLED_BIT, true);
-
-      {
-        nvvk::Image image = m_alloc.createImage(cmdBuf, bufferSize, pixels, imageCreateInfo);
-        nvvk::cmdGenerateMipmaps(cmdBuf, image.image, format, imgSize, imageCreateInfo.mipLevels);
-        VkImageViewCreateInfo ivInfo  = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
-        nvvk::Texture         texture = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
-
+        // The image format must be in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        nvvk::cmdBarrierImageLayout(cmdBuf, texture.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         m_textures.push_back(texture);
-      }
-
-      stbi_image_free(stbi_pixels);
     }
-  }
+    else
+    {
+        // Uploading all images
+        for (const auto& texture : textures)
+        {
+            std::stringstream o;
+            int texWidth, texHeight, texChannels;
+            o << "media/textures/" << texture;
+            std::string txtFile = nvh::findFile(o.str(), defaultSearchPaths, true);
+
+            stbi_uc* stbi_pixels = stbi_load(txtFile.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
+            std::array<stbi_uc, 4> color{255u, 0u, 255u, 255u};
+
+            stbi_uc* pixels = stbi_pixels;
+            // Handle failure
+            if (!stbi_pixels)
+            {
+                texWidth = texHeight = 1;
+                texChannels = 4;
+                pixels = reinterpret_cast<stbi_uc*>(color.data());
+            }
+
+            VkDeviceSize bufferSize = static_cast<uint64_t>(texWidth) * texHeight * sizeof(uint8_t) * 4;
+            auto imgSize = VkExtent2D{(uint32_t) texWidth, (uint32_t) texHeight};
+            auto imageCreateInfo = nvvk::makeImage2DCreateInfo(imgSize, format, VK_IMAGE_USAGE_SAMPLED_BIT, true);
+
+            {
+                nvvk::Image image = m_alloc.createImage(cmdBuf, bufferSize, pixels, imageCreateInfo);
+                nvvk::cmdGenerateMipmaps(cmdBuf, image.image, format, imgSize, imageCreateInfo.mipLevels);
+                VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, imageCreateInfo);
+                nvvk::Texture texture = m_alloc.createTexture(image, ivInfo, samplerCreateInfo);
+
+                m_textures.push_back(texture);
+            }
+
+            stbi_image_free(stbi_pixels);
+        }
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -487,52 +489,53 @@ void HelloVulkan::createTextureImages(const VkCommandBuffer& cmdBuf, const std::
 //
 void HelloVulkan::destroyResources()
 {
-  vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
-  vkDestroyDescriptorPool(m_device, m_descPool, nullptr);
-  vkDestroyDescriptorSetLayout(m_device, m_descSetLayout, nullptr);
+    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+    vkDestroyDescriptorPool(m_device, m_descPool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device, m_descSetLayout, nullptr);
 
-  m_alloc.destroy(m_cameraMat);
-  m_alloc.destroy(m_sceneDesc);
+    m_alloc.destroy(m_cameraMat);
+    m_alloc.destroy(m_sceneDesc);
 
-  for(auto& m : m_objModel)
-  {
-    m_alloc.destroy(m.vertexBuffer);
-    m_alloc.destroy(m.indexBuffer);
-    m_alloc.destroy(m.matColorBuffer);
-    m_alloc.destroy(m.matIndexBuffer);
-  }
+    for (auto& m : m_objModel)
+    {
+        m_alloc.destroy(m.vertexBuffer);
+        m_alloc.destroy(m.indexBuffer);
+        m_alloc.destroy(m.matColorBuffer);
+        m_alloc.destroy(m.matIndexBuffer);
+    }
 
-  for(auto& t : m_textures)
-  {
-    m_alloc.destroy(t);
-  }
+    for (auto& t : m_textures)
+    {
+        m_alloc.destroy(t);
+    }
 
-  //#Post
-  m_alloc.destroy(m_offscreenColor);
-  m_alloc.destroy(m_offscreenDepth);
-  vkDestroyPipeline(m_device, m_postPipeline, nullptr);
-  vkDestroyPipelineLayout(m_device, m_postPipelineLayout, nullptr);
-  vkDestroyDescriptorPool(m_device, m_postDescPool, nullptr);
-  vkDestroyDescriptorSetLayout(m_device, m_postDescSetLayout, nullptr);
-  vkDestroyRenderPass(m_device, m_offscreenRenderPass, nullptr);
-  vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
+    //#Post
+    m_alloc.destroy(m_offscreenColor);
+    m_alloc.destroy(m_offscreenDepth);
+    vkDestroyPipeline(m_device, m_postPipeline, nullptr);
+    vkDestroyPipelineLayout(m_device, m_postPipelineLayout, nullptr);
+    vkDestroyDescriptorPool(m_device, m_postDescPool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device, m_postDescSetLayout, nullptr);
+    vkDestroyRenderPass(m_device, m_offscreenRenderPass, nullptr);
+    vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
 
-  // #VKRay
-  m_rtBuilder.destroy();
-  m_sbtWrapper.destroy();
-  vkDestroyPipeline(m_device, m_rtPipeline, nullptr);
-  vkDestroyPipelineLayout(m_device, m_rtPipelineLayout, nullptr);
-  vkDestroyDescriptorPool(m_device, m_rtDescPool, nullptr);
-  vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
+    // #VKRay
+    m_rtBuilder.destroy();
+    m_sbtWrapper.destroy();
+    vkDestroyPipeline(m_device, m_rtPipeline, nullptr);
+    vkDestroyPipelineLayout(m_device, m_rtPipelineLayout, nullptr);
+    vkDestroyDescriptorPool(m_device, m_rtDescPool, nullptr);
+    vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
 
-  m_alloc.destroy(m_hairsBuffer);
-  for(auto i : m_hairsAabbBuffer)
-  {
-    m_alloc.destroy(i);
-  }
+    m_alloc.destroy(m_hairsBuffer);
+    for (auto i : m_clustersAabbBuffer)
+    {
+        m_alloc.destroy(i);
+    }
+    m_alloc.destroy(m_clustersBuffer);
 
-  m_alloc.deinit();
+    m_alloc.deinit();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -540,31 +543,30 @@ void HelloVulkan::destroyResources()
 //
 void HelloVulkan::rasterize(const VkCommandBuffer& cmdBuf)
 {
-  VkDeviceSize offset{0};
+    VkDeviceSize offset{0};
 
-  m_debug.beginLabel(cmdBuf, "Rasterize");
+    m_debug.beginLabel(cmdBuf, "Rasterize");
 
-  // Dynamic Viewport
-  setViewport(cmdBuf);
+    // Dynamic Viewport
+    setViewport(cmdBuf);
 
-  // Drawing all triangles
-  vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-  vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descSet, 0, nullptr);
+    // Drawing all triangles
+    vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1, &m_descSet, 0, nullptr);
 
+    for (int i = 0; i < m_objInstance.size(); ++i)
+    {
+        auto& inst = m_objInstance[i];
+        auto& model = m_objModel[inst.objIndex];
+        m_pushConstant.instanceId = i;  // Telling which instance is drawn
 
-  for(int i = 0; i < m_objInstance.size(); ++i)
-  {
-    auto& inst                = m_objInstance[i];
-    auto& model               = m_objModel[inst.objIndex];
-    m_pushConstant.instanceId = i;  // Telling which instance is drawn
-
-    vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                       sizeof(ObjPushConstant), &m_pushConstant);
-    vkCmdBindVertexBuffers(cmdBuf, 0, 1, &model.vertexBuffer.buffer, &offset);
-    vkCmdBindIndexBuffer(cmdBuf, model.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(cmdBuf, model.nbIndices, 1, 0, 0, 0);
-  }
-  m_debug.endLabel(cmdBuf);
+        vkCmdPushConstants(cmdBuf, m_pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                           sizeof(ObjPushConstant), &m_pushConstant);
+        vkCmdBindVertexBuffers(cmdBuf, 0, 1, &model.vertexBuffer.buffer, &offset);
+        vkCmdBindIndexBuffer(cmdBuf, model.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(cmdBuf, model.nbIndices, 1, 0, 0, 0);
+    }
+    m_debug.endLabel(cmdBuf);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -572,9 +574,9 @@ void HelloVulkan::rasterize(const VkCommandBuffer& cmdBuf)
 //
 void HelloVulkan::onResize(int /*w*/, int /*h*/)
 {
-  createOffscreenRender();
-  updatePostDescriptorSet();
-  updateRtDescriptorSet();
+    createOffscreenRender();
+    updatePostDescriptorSet();
+    updateRtDescriptorSet();
 }
 
 
@@ -588,69 +590,71 @@ void HelloVulkan::onResize(int /*w*/, int /*h*/)
 //
 void HelloVulkan::createOffscreenRender()
 {
-  m_alloc.destroy(m_offscreenColor);
-  m_alloc.destroy(m_offscreenDepth);
+    m_alloc.destroy(m_offscreenColor);
+    m_alloc.destroy(m_offscreenDepth);
 
-  // Creating the color image
-  {
-    auto colorCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenColorFormat,
-                                                       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+    // Creating the color image
+    {
+        auto colorCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenColorFormat,
+                                                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                                                           VK_IMAGE_USAGE_SAMPLED_BIT
                                                            | VK_IMAGE_USAGE_STORAGE_BIT);
 
+        nvvk::Image image = m_alloc.createImage(colorCreateInfo);
+        VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, colorCreateInfo);
+        VkSamplerCreateInfo sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        m_offscreenColor = m_alloc.createTexture(image, ivInfo, sampler);
+        m_offscreenColor.descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    }
 
-    nvvk::Image           image  = m_alloc.createImage(colorCreateInfo);
-    VkImageViewCreateInfo ivInfo = nvvk::makeImageViewCreateInfo(image.image, colorCreateInfo);
-    VkSamplerCreateInfo   sampler{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-    m_offscreenColor                        = m_alloc.createTexture(image, ivInfo, sampler);
-    m_offscreenColor.descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  }
+    // Creating the depth buffer
+    auto depthCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenDepthFormat,
+                                                       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    {
+        nvvk::Image image = m_alloc.createImage(depthCreateInfo);
 
-  // Creating the depth buffer
-  auto depthCreateInfo = nvvk::makeImage2DCreateInfo(m_size, m_offscreenDepthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-  {
-    nvvk::Image image = m_alloc.createImage(depthCreateInfo);
+        VkImageViewCreateInfo depthStencilView{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        depthStencilView.format = m_offscreenDepthFormat;
+        depthStencilView.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
+        depthStencilView.image = image.image;
 
+        m_offscreenDepth = m_alloc.createTexture(image, depthStencilView);
+    }
 
-    VkImageViewCreateInfo depthStencilView{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-    depthStencilView.viewType         = VK_IMAGE_VIEW_TYPE_2D;
-    depthStencilView.format           = m_offscreenDepthFormat;
-    depthStencilView.subresourceRange = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1};
-    depthStencilView.image            = image.image;
+    // Setting the image layout for both color and depth
+    {
+        nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
+        auto cmdBuf = genCmdBuf.createCommandBuffer();
+        nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenColor.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+        nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenDepth.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-    m_offscreenDepth = m_alloc.createTexture(image, depthStencilView);
-  }
+        genCmdBuf.submitAndWait(cmdBuf);
+    }
 
-  // Setting the image layout for both color and depth
-  {
-    nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-    auto              cmdBuf = genCmdBuf.createCommandBuffer();
-    nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenColor.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-    nvvk::cmdBarrierImageLayout(cmdBuf, m_offscreenDepth.image, VK_IMAGE_LAYOUT_UNDEFINED,
-                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-    genCmdBuf.submitAndWait(cmdBuf);
-  }
-
-  // Creating a renderpass for the offscreen
-  if(!m_offscreenRenderPass)
-  {
-    m_offscreenRenderPass = nvvk::createRenderPass(m_device, {m_offscreenColorFormat}, m_offscreenDepthFormat, 1, true,
-                                                   true, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
-  }
+    // Creating a renderpass for the offscreen
+    if (!m_offscreenRenderPass)
+    {
+        m_offscreenRenderPass = nvvk::createRenderPass(m_device, {m_offscreenColorFormat}, m_offscreenDepthFormat, 1,
+                                                       true,
+                                                       true, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL);
+    }
 
 
-  // Creating the frame buffer for offscreen
-  std::vector<VkImageView> attachments = {m_offscreenColor.descriptor.imageView, m_offscreenDepth.descriptor.imageView};
+    // Creating the frame buffer for offscreen
+    std::vector<VkImageView> attachments = {m_offscreenColor.descriptor.imageView,
+                                            m_offscreenDepth.descriptor.imageView};
 
-  vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
-  VkFramebufferCreateInfo info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
-  info.renderPass      = m_offscreenRenderPass;
-  info.attachmentCount = 2;
-  info.pAttachments    = attachments.data();
-  info.width           = m_size.width;
-  info.height          = m_size.height;
-  info.layers          = 1;
-  vkCreateFramebuffer(m_device, &info, nullptr, &m_offscreenFramebuffer);
+    vkDestroyFramebuffer(m_device, m_offscreenFramebuffer, nullptr);
+    VkFramebufferCreateInfo info{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+    info.renderPass = m_offscreenRenderPass;
+    info.attachmentCount = 2;
+    info.pAttachments = attachments.data();
+    info.width = m_size.width;
+    info.height = m_size.height;
+    info.layers = 1;
+    vkCreateFramebuffer(m_device, &info, nullptr, &m_offscreenFramebuffer);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -658,25 +662,27 @@ void HelloVulkan::createOffscreenRender()
 //
 void HelloVulkan::createPostPipeline()
 {
-  // Push constants in the fragment shader
-  VkPushConstantRange pushConstantRanges = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float)};
+    // Push constants in the fragment shader
+    VkPushConstantRange pushConstantRanges = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float)};
 
-  // Creating the pipeline layout
-  VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-  createInfo.setLayoutCount         = 1;
-  createInfo.pSetLayouts            = &m_postDescSetLayout;
-  createInfo.pushConstantRangeCount = 1;
-  createInfo.pPushConstantRanges    = &pushConstantRanges;
-  vkCreatePipelineLayout(m_device, &createInfo, nullptr, &m_postPipelineLayout);
+    // Creating the pipeline layout
+    VkPipelineLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    createInfo.setLayoutCount = 1;
+    createInfo.pSetLayouts = &m_postDescSetLayout;
+    createInfo.pushConstantRangeCount = 1;
+    createInfo.pPushConstantRanges = &pushConstantRanges;
+    vkCreatePipelineLayout(m_device, &createInfo, nullptr, &m_postPipelineLayout);
 
 
-  // Pipeline: completely generic, no vertices
-  nvvk::GraphicsPipelineGeneratorCombined pipelineGenerator(m_device, m_postPipelineLayout, m_renderPass);
-  pipelineGenerator.addShader(nvh::loadFile("spv/passthrough.vert.spv", true, defaultSearchPaths, true), VK_SHADER_STAGE_VERTEX_BIT);
-  pipelineGenerator.addShader(nvh::loadFile("spv/post.frag.spv", true, defaultSearchPaths, true), VK_SHADER_STAGE_FRAGMENT_BIT);
-  pipelineGenerator.rasterizationState.cullMode = VK_CULL_MODE_NONE;
-  m_postPipeline                                = pipelineGenerator.createPipeline();
-  m_debug.setObjectName(m_postPipeline, "post");
+    // Pipeline: completely generic, no vertices
+    nvvk::GraphicsPipelineGeneratorCombined pipelineGenerator(m_device, m_postPipelineLayout, m_renderPass);
+    pipelineGenerator.addShader(nvh::loadFile("spv/passthrough.vert.spv", true, defaultSearchPaths, true),
+                                VK_SHADER_STAGE_VERTEX_BIT);
+    pipelineGenerator.addShader(nvh::loadFile("spv/post.frag.spv", true, defaultSearchPaths, true),
+                                VK_SHADER_STAGE_FRAGMENT_BIT);
+    pipelineGenerator.rasterizationState.cullMode = VK_CULL_MODE_NONE;
+    m_postPipeline = pipelineGenerator.createPipeline();
+    m_debug.setObjectName(m_postPipeline, "post");
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -685,20 +691,20 @@ void HelloVulkan::createPostPipeline()
 //
 void HelloVulkan::createPostDescriptor()
 {
-  m_postDescSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
-  m_postDescSetLayout = m_postDescSetLayoutBind.createLayout(m_device);
-  m_postDescPool      = m_postDescSetLayoutBind.createPool(m_device);
-  m_postDescSet       = nvvk::allocateDescriptorSet(m_device, m_postDescPool, m_postDescSetLayout);
+    m_postDescSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+    m_postDescSetLayout = m_postDescSetLayoutBind.createLayout(m_device);
+    m_postDescPool = m_postDescSetLayoutBind.createPool(m_device);
+    m_postDescSet = nvvk::allocateDescriptorSet(m_device, m_postDescPool, m_postDescSetLayout);
 }
-
 
 //--------------------------------------------------------------------------------------------------
 // Update the output
 //
 void HelloVulkan::updatePostDescriptorSet()
 {
-  VkWriteDescriptorSet writeDescriptorSets = m_postDescSetLayoutBind.makeWrite(m_postDescSet, 0, &m_offscreenColor.descriptor);
-  vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSets, 0, nullptr);
+    VkWriteDescriptorSet writeDescriptorSets = m_postDescSetLayoutBind.makeWrite(m_postDescSet, 0,
+                                                                                 &m_offscreenColor.descriptor);
+    vkUpdateDescriptorSets(m_device, 1, &writeDescriptorSets, 0, nullptr);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -706,17 +712,18 @@ void HelloVulkan::updatePostDescriptorSet()
 //
 void HelloVulkan::drawPost(VkCommandBuffer cmdBuf)
 {
-  m_debug.beginLabel(cmdBuf, "Post");
+    m_debug.beginLabel(cmdBuf, "Post");
 
-  setViewport(cmdBuf);
+    setViewport(cmdBuf);
 
-  auto aspectRatio = static_cast<float>(m_size.width) / static_cast<float>(m_size.height);
-  vkCmdPushConstants(cmdBuf, m_postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
-  vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_postPipeline);
-  vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_postPipelineLayout, 0, 1, &m_postDescSet, 0, nullptr);
-  vkCmdDraw(cmdBuf, 3, 1, 0, 0);
+    auto aspectRatio = static_cast<float>(m_size.width) / static_cast<float>(m_size.height);
+    vkCmdPushConstants(cmdBuf, m_postPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &aspectRatio);
+    vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_postPipeline);
+    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_postPipelineLayout, 0, 1, &m_postDescSet, 0,
+                            nullptr);
+    vkCmdDraw(cmdBuf, 3, 1, 0, 0);
 
-  m_debug.endLabel(cmdBuf);
+    m_debug.endLabel(cmdBuf);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -728,13 +735,13 @@ void HelloVulkan::drawPost(VkCommandBuffer cmdBuf)
 // #VKRay
 void HelloVulkan::initRayTracing()
 {
-  // Requesting ray tracing properties
-  VkPhysicalDeviceProperties2 prop2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-  prop2.pNext = &m_rtProperties;
-  vkGetPhysicalDeviceProperties2(m_physicalDevice, &prop2);
+    // Requesting ray tracing properties
+    VkPhysicalDeviceProperties2 prop2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    prop2.pNext = &m_rtProperties;
+    vkGetPhysicalDeviceProperties2(m_physicalDevice, &prop2);
 
-  m_rtBuilder.setup(m_device, &m_alloc, m_graphicsQueueIndex);
-  m_sbtWrapper.setup(m_device, m_graphicsQueueIndex, &m_alloc, m_rtProperties);
+    m_rtBuilder.setup(m_device, &m_alloc, m_graphicsQueueIndex);
+    m_sbtWrapper.setup(m_device, m_graphicsQueueIndex, &m_alloc, m_rtProperties);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -742,73 +749,74 @@ void HelloVulkan::initRayTracing()
 //
 auto HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
 {
-  // BLAS builder requires raw device addresses.
-  VkDeviceAddress vertexAddress = nvvk::getBufferDeviceAddress(m_device, model.vertexBuffer.buffer);
-  VkDeviceAddress indexAddress  = nvvk::getBufferDeviceAddress(m_device, model.indexBuffer.buffer);
+    // BLAS builder requires raw device addresses.
+    VkDeviceAddress vertexAddress = nvvk::getBufferDeviceAddress(m_device, model.vertexBuffer.buffer);
+    VkDeviceAddress indexAddress = nvvk::getBufferDeviceAddress(m_device, model.indexBuffer.buffer);
 
-  uint32_t maxPrimitiveCount = model.nbIndices / 3;
+    uint32_t maxPrimitiveCount = model.nbIndices / 3;
 
-  // Describe buffer as array of VertexObj.
-  VkAccelerationStructureGeometryTrianglesDataKHR triangles{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
-  triangles.vertexFormat             = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec3 vertex position data.
-  triangles.vertexData.deviceAddress = vertexAddress;
-  triangles.vertexStride             = sizeof(VertexObj);
-  // Describe index data (32-bit unsigned int)
-  triangles.indexType               = VK_INDEX_TYPE_UINT32;
-  triangles.indexData.deviceAddress = indexAddress;
-  // Indicate identity transform by setting transformData to null device pointer.
-  //triangles.transformData = {};
-  triangles.maxVertex = model.nbVertices;
+    // Describe buffer as array of VertexObj.
+    VkAccelerationStructureGeometryTrianglesDataKHR triangles{
+            VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR};
+    triangles.vertexFormat = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec3 vertex position data.
+    triangles.vertexData.deviceAddress = vertexAddress;
+    triangles.vertexStride = sizeof(VertexObj);
+    // Describe index data (32-bit unsigned int)
+    triangles.indexType = VK_INDEX_TYPE_UINT32;
+    triangles.indexData.deviceAddress = indexAddress;
+    // Indicate identity transform by setting transformData to null device pointer.
+    //triangles.transformData = {};
+    triangles.maxVertex = model.nbVertices;
 
-  // Identify the above data as containing opaque triangles.
-  VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-  asGeom.geometryType       = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-  asGeom.flags              = VK_GEOMETRY_OPAQUE_BIT_KHR;
-  asGeom.geometry.triangles = triangles;
+    // Identify the above data as containing opaque triangles.
+    VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+    asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    asGeom.geometry.triangles = triangles;
 
-  // The entire array will be used to build the BLAS.
-  VkAccelerationStructureBuildRangeInfoKHR offset;
-  offset.firstVertex     = 0;
-  offset.primitiveCount  = maxPrimitiveCount;
-  offset.primitiveOffset = 0;
-  offset.transformOffset = 0;
+    // The entire array will be used to build the BLAS.
+    VkAccelerationStructureBuildRangeInfoKHR offset;
+    offset.firstVertex = 0;
+    offset.primitiveCount = maxPrimitiveCount;
+    offset.primitiveOffset = 0;
+    offset.transformOffset = 0;
 
-  // Our blas is made from only one geometry, but could be made of many geometries
-  nvvk::RaytracingBuilderKHR::BlasInput input;
-  input.asGeometry.emplace_back(asGeom);
-  input.asBuildOffsetInfo.emplace_back(offset);
+    // Our blas is made from only one geometry, but could be made of many geometries
+    nvvk::RaytracingBuilderKHR::BlasInput input;
+    input.asGeometry.emplace_back(asGeom);
+    input.asBuildOffsetInfo.emplace_back(offset);
 
-  return input;
+    return input;
 }
 
 // Returning the ray tracing geometry used for the BLAS, containing all hairs
 //
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
+nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(uint32_t index)
 {
-  VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_hairsAabbBuffer[0].buffer);
+    VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_clustersAabbBuffer[index].buffer);
 
-  VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
-  aabbs.data.deviceAddress = dataAddress;
-  aabbs.stride             = sizeof(Aabb);
+    VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
+    aabbs.data.deviceAddress = dataAddress;
+    aabbs.stride = sizeof(Aabb);
 
-  // Setting up the build info of the acceleration (C version, c++ gives wrong type)
-  VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
-  asGeom.geometryType   = VK_GEOMETRY_TYPE_AABBS_KHR;
-  asGeom.flags          = VK_GEOMETRY_OPAQUE_BIT_KHR;
-  asGeom.geometry.aabbs = aabbs;
+    // Setting up the build info of the acceleration (C version, c++ gives wrong type)
+    VkAccelerationStructureGeometryKHR asGeom{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    asGeom.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+    asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+    asGeom.geometry.aabbs = aabbs;
 
-  nvvk::RaytracingBuilderKHR::BlasInput input;
+    nvvk::RaytracingBuilderKHR::BlasInput input;
 
-  VkAccelerationStructureBuildRangeInfoKHR offset{};
-  offset.firstVertex     = 0;
-  offset.primitiveCount  = 1;
-  offset.primitiveOffset = 0;
-  offset.transformOffset = 0;
+    VkAccelerationStructureBuildRangeInfoKHR offset{};
+    offset.firstVertex = 0;
+    offset.primitiveCount = 1;
+    offset.primitiveOffset = 0;
+    offset.transformOffset = 0;
 
-  input.asGeometry.emplace_back(asGeom);
-  input.asBuildOffsetInfo.emplace_back(offset);
+    input.asGeometry.emplace_back(asGeom);
+    input.asBuildOffsetInfo.emplace_back(offset);
 
-  return input;
+    return input;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -816,48 +824,100 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 //
 void HelloVulkan::createBottomLevelAS()
 {
-  // BLAS - Storing each primitive in a geometry
-  std::vector<nvvk::RaytracingBuilderKHR::BlasInput> allBlas;
-  allBlas.reserve(m_objInstance.size() + m_hairs.size());
-  /*for(const auto& inst : m_objInstance)
-  {
-    auto blas = objectToVkGeometryKHR(m_objModel[inst.objIndex]);
-    // We could add more geometry in each BLAS, but we add only one for now
-    allBlas.emplace_back(blas);
-  }*/
-  // hairs
-  auto blasHair = hairToVkGeometryKHR();
-  allBlas.emplace_back(blasHair);
+    nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
+    VkCommandBuffer cmdBuf = genCmdBuf.createCommandBuffer();
+    // BLAS - Storing each primitive in a geometry
+    std::vector<nvvk::RaytracingBuilderKHR::BlasInput> allBlas;
+    allBlas.reserve(m_objInstance.size() + m_hairs.size());
+    /*for(const auto& inst : m_objInstance)
+    {
+      auto blas = objectToVkGeometryKHR(m_objModel[inst.objIndex]);
+      // We could add more geometry in each BLAS, but we add only one for now
+      allBlas.emplace_back(blas);
+    }*/
+    // hairs
+    uint32_t clusterSize = 0;
+    for (uint32_t i = 0; i < m_hairs.size(); ++i)
+    {
+        const auto& hair = m_hairs[i];
+        ++clusterSize;
+        if (clusterSize == 5 /*|| TODO: distance to next segment is too big (pay attention to end of vector)*/)
+        {
+            m_clusters.push_back(Cluster{i - clusterSize + 1, clusterSize});
+            m_trans.push_back(nvmath::mat4f_id);
+            clusterSize = 0;
+        }
+    }
+    if (clusterSize > 0)
+    {
+        m_clusters.push_back(Cluster{m_clusters.back().index + m_clusters.back().count, clusterSize});
+        m_trans.push_back(nvmath::mat4f_id);
+    }
 
-  m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+    std::vector<Aabb> hairAabbs;
+    for (const auto& cluster : m_clusters)
+    {
+        nvmath::vec3f max = m_hairs[cluster.index].v0.p;
+        nvmath::vec3f min = m_hairs[cluster.index].v0.p;
+        for (uint32_t i = 0; i < cluster.count; ++i)
+        {
+            auto& hair = m_hairs[cluster.index + i];
+            nvmath::vec3f p0 = hair.v0.p;
+            nvmath::vec3f p1 = hair.v1.p;
+            nvmath::vec3 a = p1 - p0;
+            nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2.0f) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
+            max = nvmath::nv_max(max, nvmath::nv_max(p0 + extent, p1 + extent));
+            min = nvmath::nv_min(min, nvmath::nv_min(p0 - extent, p1 - extent));
+        }
+        hairAabbs.emplace_back(Aabb{min, max});
+        m_clustersAabbBuffer.emplace_back(m_alloc.createBuffer(
+                cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
+        hairAabbs.clear();
+    }
+
+    m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    m_clustersBuffer = m_alloc.createBuffer(cmdBuf, m_clusters, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    genCmdBuf.submitAndWait(cmdBuf);
+    // Debug information
+    m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
+
+    for (int i = 0; i < m_clusters.size(); ++i)
+    {
+        auto blasHair = hairToVkGeometryKHR(i);
+        allBlas.emplace_back(blasHair);
+    }
+
+    m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
 void HelloVulkan::createTopLevelAS()
 {
-  std::vector<nvvk::RaytracingBuilderKHR::Instance> tlas;
-  tlas.reserve(m_objInstance.size() + m_hairs.size());
-  /*for(uint32_t i = 0; i < static_cast<uint32_t>(m_objInstance.size()); i++)
-  {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_objInstance[i].transform;  // Position of the instance
-    rayInst.instanceCustomId = i;                           // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = i;
-    rayInst.hitGroupId       = 0;
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  }*/
-  // hairs
-  for(int i = 0; i < m_hairs.size(); ++i)
-  {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_hairs[i].trans;
-    rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = 0;
-    rayInst.hitGroupId       = 1;
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  }
-  m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+    std::vector<nvvk::RaytracingBuilderKHR::Instance> tlas;
+    tlas.reserve(m_objInstance.size() + m_hairs.size());
+    /*for(uint32_t i = 0; i < static_cast<uint32_t>(m_objInstance.size()); i++)
+    {
+      nvvk::RaytracingBuilderKHR::Instance rayInst;
+      rayInst.transform        = m_objInstance[i].transform;  // Position of the instance
+      rayInst.instanceCustomId = i;                           // gl_InstanceCustomIndexEXT
+      rayInst.blasId           = i;
+      rayInst.hitGroupId       = 0;
+      rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+      tlas.emplace_back(rayInst);
+    }*/
+    // hairs
+    for (int i = 0; i < m_clusters.size(); ++i)
+    {
+        const auto& m_cluster = m_clusters[i];
+        nvvk::RaytracingBuilderKHR::Instance rayInst;
+        rayInst.transform = m_trans[i];
+        rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
+        rayInst.blasId = static_cast<uint32_t>(tlas.size());
+        rayInst.hitGroupId = 1;
+        rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        tlas.emplace_back(rayInst);
+    }
+    m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -865,35 +925,34 @@ void HelloVulkan::createTopLevelAS()
 //
 void HelloVulkan::createRtDescriptorSet()
 {
-  // Top-level acceleration structure, usable by both the ray generation and the closest hit (to
-  // shoot shadow rays)
-  m_rtDescSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1,
-                                   VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);  // TLAS
-  m_rtDescSetLayoutBind.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
-                                   VK_SHADER_STAGE_RAYGEN_BIT_KHR);  // Output image
+    // Top-level acceleration structure, usable by both the ray generation and the closest hit (to
+    // shoot shadow rays)
+    m_rtDescSetLayoutBind.addBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1,
+                                     VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);  // TLAS
+    m_rtDescSetLayoutBind.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
+                                     VK_SHADER_STAGE_RAYGEN_BIT_KHR);  // Output image
 
-  m_rtDescPool      = m_rtDescSetLayoutBind.createPool(m_device);
-  m_rtDescSetLayout = m_rtDescSetLayoutBind.createLayout(m_device);
+    m_rtDescPool = m_rtDescSetLayoutBind.createPool(m_device);
+    m_rtDescSetLayout = m_rtDescSetLayoutBind.createLayout(m_device);
 
-  VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-  allocateInfo.descriptorPool     = m_rtDescPool;
-  allocateInfo.descriptorSetCount = 1;
-  allocateInfo.pSetLayouts        = &m_rtDescSetLayout;
-  vkAllocateDescriptorSets(m_device, &allocateInfo, &m_rtDescSet);
+    VkDescriptorSetAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    allocateInfo.descriptorPool = m_rtDescPool;
+    allocateInfo.descriptorSetCount = 1;
+    allocateInfo.pSetLayouts = &m_rtDescSetLayout;
+    vkAllocateDescriptorSets(m_device, &allocateInfo, &m_rtDescSet);
 
+    VkAccelerationStructureKHR tlas = m_rtBuilder.getAccelerationStructure();
+    VkWriteDescriptorSetAccelerationStructureKHR descASInfo{
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR};
+    descASInfo.accelerationStructureCount = 1;
+    descASInfo.pAccelerationStructures = &tlas;
+    VkDescriptorImageInfo imageInfo{{}, m_offscreenColor.descriptor.imageView, VK_IMAGE_LAYOUT_GENERAL};
 
-  VkAccelerationStructureKHR                   tlas = m_rtBuilder.getAccelerationStructure();
-  VkWriteDescriptorSetAccelerationStructureKHR descASInfo{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR};
-  descASInfo.accelerationStructureCount = 1;
-  descASInfo.pAccelerationStructures    = &tlas;
-  VkDescriptorImageInfo imageInfo{{}, m_offscreenColor.descriptor.imageView, VK_IMAGE_LAYOUT_GENERAL};
-
-  std::vector<VkWriteDescriptorSet> writes;
-  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 0, &descASInfo));
-  writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 1, &imageInfo));
-  vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    std::vector<VkWriteDescriptorSet> writes;
+    writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 0, &descASInfo));
+    writes.emplace_back(m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 1, &imageInfo));
+    vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
-
 
 //--------------------------------------------------------------------------------------------------
 // Writes the output image to the descriptor set
@@ -901,139 +960,147 @@ void HelloVulkan::createRtDescriptorSet()
 //
 void HelloVulkan::updateRtDescriptorSet()
 {
-  // (1) Output buffer
-  VkDescriptorImageInfo imageInfo{{}, m_offscreenColor.descriptor.imageView, VK_IMAGE_LAYOUT_GENERAL};
-  VkWriteDescriptorSet  wds = m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 1, &imageInfo);
-  vkUpdateDescriptorSets(m_device, 1, &wds, 0, nullptr);
+    // (1) Output buffer
+    VkDescriptorImageInfo imageInfo{{}, m_offscreenColor.descriptor.imageView, VK_IMAGE_LAYOUT_GENERAL};
+    VkWriteDescriptorSet wds = m_rtDescSetLayoutBind.makeWrite(m_rtDescSet, 1, &imageInfo);
+    vkUpdateDescriptorSets(m_device, 1, &wds, 0, nullptr);
 }
-
 
 //--------------------------------------------------------------------------------------------------
 // Pipeline for the ray tracer: all shaders, raygen, chit, miss
 //
 void HelloVulkan::createRtPipeline()
 {
-  enum StageIndices
-  {
-    eRaygen,
-    eMiss,
-    eMiss2,
-    eClosestHit,
-    eClosestHair,
-    eHairIntersect,
-    eShaderGroupCount
-  };
+    enum StageIndices
+    {
+        eRaygen,
+        eMiss,
+        eMiss2,
+        eClosestHit,
+        eClosestHair,
+        eHairIntersect,
+        eShaderGroupCount
+    };
 
-  // All stages
-  std::array<VkPipelineShaderStageCreateInfo, eShaderGroupCount> stages{};
-  VkPipelineShaderStageCreateInfo stage{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-  stage.pName = "main";  // All the same entry point
-  // Raygen
-  stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rgen.spv", true, defaultSearchPaths, true));
-  stage.stage     = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-  stages[eRaygen] = stage;
-  // Miss
-  stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rmiss.spv", true, defaultSearchPaths, true));
-  stage.stage   = VK_SHADER_STAGE_MISS_BIT_KHR;
-  stages[eMiss] = stage;
-  // The second miss shader is invoked when a shadow ray misses the geometry. It simply indicates that no occlusion has been found
-  stage.module =
-      nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytraceShadow.rmiss.spv", true, defaultSearchPaths, true));
-  stage.stage    = VK_SHADER_STAGE_MISS_BIT_KHR;
-  stages[eMiss2] = stage;
-  // Hit Group - Closest Hit
-  stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rchit.spv", true, defaultSearchPaths, true));
-  stage.stage         = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-  stages[eClosestHit] = stage;
-  // Closest hit
-  stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytraceHair.rchit.spv", true, defaultSearchPaths, true));
-  stage.stage          = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-  stages[eClosestHair] = stage;
-  //Hair Intersection
-  stage.module = nvvk::createShaderModule(m_device, nvh::loadFile("spv/raytrace.rint.spv", true, defaultSearchPaths, true));
-  stage.stage            = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-  stages[eHairIntersect] = stage;
+    // All stages
+    std::array<VkPipelineShaderStageCreateInfo, eShaderGroupCount> stages{};
+    VkPipelineShaderStageCreateInfo stage{VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
+    stage.pName = "main";  // All the same entry point
+    // Raygen
+    stage.module = nvvk::createShaderModule(m_device,
+                                            nvh::loadFile("spv/raytrace.rgen.spv", true, defaultSearchPaths, true));
+    stage.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+    stages[eRaygen] = stage;
+    // Miss
+    stage.module = nvvk::createShaderModule(m_device,
+                                            nvh::loadFile("spv/raytrace.rmiss.spv", true, defaultSearchPaths, true));
+    stage.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+    stages[eMiss] = stage;
+    // The second miss shader is invoked when a shadow ray misses the geometry. It simply indicates that no occlusion has been found
+    stage.module =
+            nvvk::createShaderModule(m_device,
+                                     nvh::loadFile("spv/raytraceShadow.rmiss.spv", true, defaultSearchPaths, true));
+    stage.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+    stages[eMiss2] = stage;
+    // Hit Group - Closest Hit
+    stage.module = nvvk::createShaderModule(m_device,
+                                            nvh::loadFile("spv/raytrace.rchit.spv", true, defaultSearchPaths, true));
+    stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    stages[eClosestHit] = stage;
+    // Closest hit
+    stage.module = nvvk::createShaderModule(m_device,
+                                            nvh::loadFile("spv/raytraceHair.rchit.spv", true, defaultSearchPaths,
+                                                          true));
+    stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+    stages[eClosestHair] = stage;
+    //Hair Intersection
+    stage.module = nvvk::createShaderModule(m_device,
+                                            nvh::loadFile("spv/raytrace.rint.spv", true, defaultSearchPaths, true));
+    stage.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+    stages[eHairIntersect] = stage;
 
-  // Shader groups
-  VkRayTracingShaderGroupCreateInfoKHR group{VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR};
-  group.anyHitShader       = VK_SHADER_UNUSED_KHR;
-  group.closestHitShader   = VK_SHADER_UNUSED_KHR;
-  group.generalShader      = VK_SHADER_UNUSED_KHR;
-  group.intersectionShader = VK_SHADER_UNUSED_KHR;
+    // Shader groups
+    VkRayTracingShaderGroupCreateInfoKHR group{VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR};
+    group.anyHitShader = VK_SHADER_UNUSED_KHR;
+    group.closestHitShader = VK_SHADER_UNUSED_KHR;
+    group.generalShader = VK_SHADER_UNUSED_KHR;
+    group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-  // Raygen
-  group.type          = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-  group.generalShader = eRaygen;
-  m_rtShaderGroups.push_back(group);
+    // Raygen
+    group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    group.generalShader = eRaygen;
+    m_rtShaderGroups.push_back(group);
 
-  // Miss
-  group.type          = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-  group.generalShader = eMiss;
-  m_rtShaderGroups.push_back(group);
+    // Miss
+    group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    group.generalShader = eMiss;
+    m_rtShaderGroups.push_back(group);
 
-  // Shadow Miss
-  group.type          = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-  group.generalShader = eMiss2;
-  m_rtShaderGroups.push_back(group);
+    // Shadow Miss
+    group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    group.generalShader = eMiss2;
+    m_rtShaderGroups.push_back(group);
 
-  // closest hit shader
-  group.type             = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-  group.generalShader    = VK_SHADER_UNUSED_KHR;
-  group.closestHitShader = eClosestHit;
-  m_rtShaderGroups.push_back(group);
+    // closest hit shader
+    group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+    group.generalShader = VK_SHADER_UNUSED_KHR;
+    group.closestHitShader = eClosestHit;
+    m_rtShaderGroups.push_back(group);
 
-  // closest hit shader + Intersection
-  group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
-  group.closestHitShader   = eClosestHair;
-  group.intersectionShader = eHairIntersect;
-  m_rtShaderGroups.push_back(group);
+    // closest hit shader + Intersection
+    group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+    group.closestHitShader = eClosestHair;
+    group.intersectionShader = eHairIntersect;
+    m_rtShaderGroups.push_back(group);
 
-  // Push constant: we want to be able to update constants used by the shaders
-  VkPushConstantRange pushConstant{VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR,
-                                   0, sizeof(RtPushConstant)};
+    // Push constant: we want to be able to update constants used by the shaders
+    VkPushConstantRange pushConstant{
+            VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR,
+            0, sizeof(RtPushConstant)};
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+    pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstant;
+
+    // Descriptor sets: one specific to ray tracing, and one shared with the rasterization pipeline
+    std::vector<VkDescriptorSetLayout> rtDescSetLayouts = {m_rtDescSetLayout, m_descSetLayout};
+    pipelineLayoutCreateInfo.setLayoutCount = static_cast<uint32_t>(rtDescSetLayouts.size());
+    pipelineLayoutCreateInfo.pSetLayouts = rtDescSetLayouts.data();
+
+    vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo, nullptr, &m_rtPipelineLayout);
 
 
-  VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-  pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
-  pipelineLayoutCreateInfo.pPushConstantRanges    = &pushConstant;
+    // Assemble the shader stages and recursion depth info into the ray tracing pipeline
+    VkRayTracingPipelineCreateInfoKHR rayPipelineInfo{VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
+    rayPipelineInfo.stageCount = static_cast<uint32_t>(stages.size());  // Stages are shaders
+    rayPipelineInfo.pStages = stages.data();
 
-  // Descriptor sets: one specific to ray tracing, and one shared with the rasterization pipeline
-  std::vector<VkDescriptorSetLayout> rtDescSetLayouts = {m_rtDescSetLayout, m_descSetLayout};
-  pipelineLayoutCreateInfo.setLayoutCount             = static_cast<uint32_t>(rtDescSetLayouts.size());
-  pipelineLayoutCreateInfo.pSetLayouts                = rtDescSetLayouts.data();
+    // In this case, m_rtShaderGroups.size() == 4: we have one raygen group,
+    // two miss shader groups, and one hit group.
+    rayPipelineInfo.groupCount = static_cast<uint32_t>(m_rtShaderGroups.size());
+    rayPipelineInfo.pGroups = m_rtShaderGroups.data();
 
-  vkCreatePipelineLayout(m_device, &pipelineLayoutCreateInfo, nullptr, &m_rtPipelineLayout);
+    // The ray tracing process can shoot rays from the camera, and a shadow ray can be shot from the
+    // hit points of the camera rays, hence a recursion level of 2. This number should be kept as low
+    // as possible for performance reasons. Even recursive ray tracing should be flattened into a loop
+    // in the ray generation to avoid deep recursion.
+    rayPipelineInfo.maxPipelineRayRecursionDepth = 2;  // Ray depth
+    rayPipelineInfo.layout = m_rtPipelineLayout;
 
+    vkCreateRayTracingPipelinesKHR(m_device, {}, {}, 1, &rayPipelineInfo, nullptr, &m_rtPipeline);
 
-  // Assemble the shader stages and recursion depth info into the ray tracing pipeline
-  VkRayTracingPipelineCreateInfoKHR rayPipelineInfo{VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
-  rayPipelineInfo.stageCount = static_cast<uint32_t>(stages.size());  // Stages are shaders
-  rayPipelineInfo.pStages    = stages.data();
+    m_sbtWrapper.create(m_rtPipeline, rayPipelineInfo);
 
-  // In this case, m_rtShaderGroups.size() == 4: we have one raygen group,
-  // two miss shader groups, and one hit group.
-  rayPipelineInfo.groupCount = static_cast<uint32_t>(m_rtShaderGroups.size());
-  rayPipelineInfo.pGroups    = m_rtShaderGroups.data();
+    // Spec only guarantees 1 level of "recursion". Check for that sad possibility here.
+    if (m_rtProperties.maxRayRecursionDepth <= 1)
+    {
+        throw std::runtime_error("Device fails to support ray recursion (m_rtProperties.maxRayRecursionDepth <= 1)");
+    }
 
-  // The ray tracing process can shoot rays from the camera, and a shadow ray can be shot from the
-  // hit points of the camera rays, hence a recursion level of 2. This number should be kept as low
-  // as possible for performance reasons. Even recursive ray tracing should be flattened into a loop
-  // in the ray generation to avoid deep recursion.
-  rayPipelineInfo.maxPipelineRayRecursionDepth = 2;  // Ray depth
-  rayPipelineInfo.layout                       = m_rtPipelineLayout;
-
-  vkCreateRayTracingPipelinesKHR(m_device, {}, {}, 1, &rayPipelineInfo, nullptr, &m_rtPipeline);
-
-  m_sbtWrapper.create(m_rtPipeline, rayPipelineInfo);
-
-  // Spec only guarantees 1 level of "recursion". Check for that sad possibility here.
-  if(m_rtProperties.maxRayRecursionDepth <= 1)
-  {
-    throw std::runtime_error("Device fails to support ray recursion (m_rtProperties.maxRayRecursionDepth <= 1)");
-  }
-
-  for(auto& s : stages)
-    vkDestroyShaderModule(m_device, s.module, nullptr);
+    for (auto& s : stages)
+    {
+        vkDestroyShaderModule(m_device, s.module, nullptr);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1041,26 +1108,24 @@ void HelloVulkan::createRtPipeline()
 //
 void HelloVulkan::raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& clearColor)
 {
-  m_debug.beginLabel(cmdBuf, "Ray trace");
-  // Initializing push constant values
-  m_rtPushConstants.clearColor     = clearColor;
-  m_rtPushConstants.lightPosition  = m_pushConstant.lightPosition;
-  m_rtPushConstants.lightIntensity = m_pushConstant.lightIntensity;
-  m_rtPushConstants.lightType      = m_pushConstant.lightType;
+    m_debug.beginLabel(cmdBuf, "Ray trace");
+    // Initializing push constant values
+    m_rtPushConstants.clearColor = clearColor;
+    m_rtPushConstants.lightPosition = m_pushConstant.lightPosition;
+    m_rtPushConstants.lightIntensity = m_pushConstant.lightIntensity;
+    m_rtPushConstants.lightType = m_pushConstant.lightType;
 
+    std::vector<VkDescriptorSet> descSets{m_rtDescSet, m_descSet};
+    vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipeline);
+    vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipelineLayout, 0,
+                            (uint32_t) descSets.size(), descSets.data(), 0, nullptr);
+    vkCmdPushConstants(cmdBuf, m_rtPipelineLayout,
+                       VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+                       VK_SHADER_STAGE_MISS_BIT_KHR,
+                       0, sizeof(RtPushConstant), &m_rtPushConstants);
 
-  std::vector<VkDescriptorSet> descSets{m_rtDescSet, m_descSet};
-  vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipeline);
-  vkCmdBindDescriptorSets(cmdBuf, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipelineLayout, 0,
-                          (uint32_t)descSets.size(), descSets.data(), 0, nullptr);
-  vkCmdPushConstants(cmdBuf, m_rtPipelineLayout,
-                     VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR,
-                     0, sizeof(RtPushConstant), &m_rtPushConstants);
+    auto& regions = m_sbtWrapper.getRegions();
+    vkCmdTraceRaysKHR(cmdBuf, &regions[0], &regions[1], &regions[2], &regions[3], m_size.width, m_size.height, 1);
 
-
-  auto& regions = m_sbtWrapper.getRegions();
-  vkCmdTraceRaysKHR(cmdBuf, &regions[0], &regions[1], &regions[2], &regions[3], m_size.width, m_size.height, 1);
-
-
-  m_debug.endLabel(cmdBuf);
+    m_debug.endLabel(cmdBuf);
 }

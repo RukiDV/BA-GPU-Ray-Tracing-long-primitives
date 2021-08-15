@@ -258,7 +258,7 @@ void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBui
   // Allocate the instance buffer and copy its contents from host to device memory
   if(update)
     m_alloc->destroy(m_instBuffer);
-  m_instBuffer = m_alloc->createBuffer(cmdBuf, geometryInstances, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+  m_instBuffer = m_alloc->createBuffer(cmdBuf, geometryInstances, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
   NAME_VK(m_instBuffer.buffer);
   VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
   bufferInfo.buffer               = m_instBuffer.buffer;

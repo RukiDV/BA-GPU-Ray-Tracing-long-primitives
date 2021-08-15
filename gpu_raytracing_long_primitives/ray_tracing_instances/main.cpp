@@ -222,12 +222,13 @@ int main(int argc, char** argv)
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createSceneDescriptionBuffer();
-  helloVk.updateDescriptorSet();
+//  helloVk.updateDescriptorSet();
 
-  // #VKRay
-  helloVk.initRayTracing();
-  helloVk.createBottomLevelAS();
-  helloVk.createTopLevelAS();
+    // #VKRay
+    helloVk.initRayTracing();
+    helloVk.createBottomLevelAS();
+    helloVk.updateDescriptorSet();
+    helloVk.createTopLevelAS();
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
 
