@@ -843,6 +843,8 @@ void HelloVulkan::createBottomLevelAS()
         ++clusterSize;
         if (clusterSize == 5 /*|| TODO: distance to next segment is too big (pay attention to end of vector)*/)
         {
+            // TODO: if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
+            // rotation matrix from (0,1,0) to vector is transformation matrix of instance
             m_clusters.push_back(Cluster{i - clusterSize + 1, clusterSize});
             m_trans.push_back(nvmath::mat4f_id);
             clusterSize = 0;
@@ -906,13 +908,13 @@ void HelloVulkan::createTopLevelAS()
       tlas.emplace_back(rayInst);
     }*/
     // hairs
-    for (int i = 0; i < m_clusters.size(); ++i)
+    for (uint32_t i = 0; i < m_clusters.size(); ++i)
     {
         const auto& m_cluster = m_clusters[i];
         nvvk::RaytracingBuilderKHR::Instance rayInst;
         rayInst.transform = m_trans[i];
-        rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-        rayInst.blasId = static_cast<uint32_t>(tlas.size());
+        rayInst.instanceCustomId = static_cast<uint32_t>(i);  // gl_InstanceCustomIndexEXT
+        rayInst.blasId = static_cast<uint32_t>(i);
         rayInst.hitGroupId = 1;
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         tlas.emplace_back(rayInst);
