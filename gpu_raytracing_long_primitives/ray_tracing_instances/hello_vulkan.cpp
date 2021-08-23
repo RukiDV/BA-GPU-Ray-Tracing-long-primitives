@@ -337,7 +337,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     float* vertices = hairfile.GetPointsArray();
     float* colors = hairfile.GetColorsArray();
     const unsigned short* segments = hairfile.GetSegmentsArray();
-    for (uint32_t i = 0; i < 2; i++)
+    for (uint32_t i = 0; i < 3; i++)
     {
         for (uint32_t j = 0; j < segments[i]; j++)
         {
@@ -347,25 +347,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
             nvmath::vec3 p1 =
                     nvmath::vec3(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3],
                                  vertices[pointIndex + 5 + j * 3]) / 7.0f;
-
-            float scale = nvmath::length(p1 - p0);
-            float x = p0.x;
-            float y = p0.y;
-            float z = p0.z;
-            nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
-            nvmath::vec3 dir = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
-            nvmath::vec3 v = nvmath::cross(unit, dir);
-            float c = nvmath::dot(unit, dir);
-            float safe = 1.0f / (1.0f + c);
-            // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
-            // smashed into one big matrix because adding the single matrices didn't work
-            nvmath::mat4f trans =
-                    nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
-                                  v.x * v.z * safe - v.y, 0.0f,
-                                  (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
-                                  (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y,
-                                  v.y * v.z * safe - v.x,
-                                  (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
 
             m_hairs.push_back(Hair{
                     p0, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3],
@@ -819,6 +800,41 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(uint32_t 
     return input;
 }
 
+// i is the index of last segment that the cluster will contain
+void HelloVulkan::addCluster(uint32_t i, uint32_t clusterSize)
+{
+    auto cluster = Cluster{nvmath::mat4f_id, i - clusterSize + 1, clusterSize};
+    nvmath::vec3f p0 = m_hairs[cluster.index].v0.p;
+    nvmath::vec3f p1 = m_hairs[cluster.index + cluster.count - 1].v1.p;
+    float scale = nvmath::length(p1 - p0);
+    float x = p0.x;
+    float y = p0.y;
+    float z = p0.z;
+    nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+    nvmath::vec3 dir = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
+    nvmath::vec3 v = nvmath::cross(unit, dir);
+    float c = nvmath::dot(unit, dir);
+    float safe = 1.0f / (1.0f + c);
+    // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+    // smashed into one big matrix because adding the single matrices didn't work
+    nvmath::mat4f trans =
+            nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
+                          v.x * v.z * safe - v.y, 0.0f,
+                          (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
+                          (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y,
+                          v.y * v.z * safe - v.x,
+                          (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
+    nvmath::mat4f trans_inv = nvmath::invert(trans);
+    for (uint32_t j = 0; j < cluster.count; ++j)
+    {
+        uint32_t index = cluster.index + j;
+        m_hairs[index].v0.p = trans_inv * m_hairs[index].v0.p;
+        m_hairs[index].v1.p = trans_inv * m_hairs[index].v1.p;
+    }
+    cluster.trans = trans;
+    m_clusters.push_back(cluster);
+}
+
 //--------------------------------------------------------------------------------------------------
 //
 //
@@ -837,24 +853,24 @@ void HelloVulkan::createBottomLevelAS()
     }*/
     // hairs
     uint32_t clusterSize = 0;
-    for (uint32_t i = 0; i < m_hairs.size(); ++i)
+    for (uint32_t i = 0; i < m_hairs.size() - 1; ++i)
     {
-        const auto& hair = m_hairs[i];
+        auto& hair = m_hairs[i];
         ++clusterSize;
-        if (clusterSize == 5 /*|| TODO: distance to next segment is too big (pay attention to end of vector)*/)
+        // end cluster either if it reached its maximum size or if the next segment is too far away
+        if (clusterSize == 5 || nvmath::length(hair.v1.p - m_hairs[i+1].v0.p) > 1.0f)
         {
             // TODO: if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
             // rotation matrix from (0,1,0) to vector is transformation matrix of instance
-            m_clusters.push_back(Cluster{i - clusterSize + 1, clusterSize});
-            m_trans.push_back(nvmath::mat4f_id);
+            addCluster(i, clusterSize);
             clusterSize = 0;
         }
     }
-    if (clusterSize > 0)
-    {
-        m_clusters.push_back(Cluster{m_clusters.back().index + m_clusters.back().count, clusterSize});
-        m_trans.push_back(nvmath::mat4f_id);
-    }
+    // add another cluster for the remaining segments
+    // in the for loop the last segment wasn't added into a cluster, so we also add it here
+    // it doesn't matter if we got one or more segments left, this works anyways
+    ++clusterSize;
+    addCluster(m_clusters.back().index + m_clusters.back().count + clusterSize - 1, clusterSize);
 
     std::vector<Aabb> hairAabbs;
     for (const auto& cluster : m_clusters)
@@ -912,7 +928,7 @@ void HelloVulkan::createTopLevelAS()
     {
         const auto& m_cluster = m_clusters[i];
         nvvk::RaytracingBuilderKHR::Instance rayInst;
-        rayInst.transform = m_trans[i];
+        rayInst.transform = m_cluster.trans;
         rayInst.instanceCustomId = static_cast<uint32_t>(i);  // gl_InstanceCustomIndexEXT
         rayInst.blasId = static_cast<uint32_t>(i);
         rayInst.hitGroupId = 1;

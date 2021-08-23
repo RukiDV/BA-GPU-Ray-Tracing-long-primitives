@@ -43,7 +43,7 @@ layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 1, scalar) buffer SceneDesc_ { SceneDesc i[]; } sceneDesc;
 layout(binding = 2, set = 1) uniform sampler2D textureSamplers[];
 layout(binding = 3, set = 1, scalar, std140) buffer allHairs_ { Hair allHairs[]; };
-layout(binding = 4, set = 1, scalar, std430) buffer allClusters_ { Cluster allClusters[]; };
+layout(binding = 4, set = 1, scalar, std140) buffer allClusters_ { Cluster allClusters[]; };
 // clang-format on
 
 layout(push_constant) uniform Constants

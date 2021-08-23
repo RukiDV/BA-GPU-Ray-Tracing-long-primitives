@@ -38,6 +38,7 @@ struct Hair
 
 struct Cluster
 {
+    mat4 trans;
     uint index;
     uint count;
 };

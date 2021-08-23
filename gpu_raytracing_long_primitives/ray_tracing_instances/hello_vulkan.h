@@ -152,6 +152,7 @@ public:
     // #VKRay
     void initRayTracing();
     auto objectToVkGeometryKHR(const ObjModel& model);
+    void addCluster(uint32_t i, uint32_t clusterSize);
     void createBottomLevelAS();
     void createTopLevelAS();
     void createRtDescriptorSet();
@@ -201,6 +202,7 @@ public:
 
     struct Cluster
     {
+        nvmath::mat4 trans{nvmath::mat4f_id};
         uint32_t index{0};
         uint32_t count{0};
     };
@@ -212,6 +214,6 @@ public:
     nvvk::Buffer m_hairsBuffer;      // Buffer holding the hairs
     nvvk::Buffer m_clustersBuffer;
     std::vector<nvvk::Buffer> m_clustersAabbBuffer;  // Buffer of all Aabbs
-    std::vector<nvmath::mat4f> m_trans;
+    //std::vector<nvmath::mat4f> m_trans;
     void loadHairModel(const char* filename, cyHairFile& hairfile);
 };
