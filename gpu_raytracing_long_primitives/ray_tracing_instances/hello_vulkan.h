@@ -72,6 +72,12 @@ public:
     void destroyResources();
     void rasterize(const VkCommandBuffer& cmdBuff);
 
+    struct Aabb
+    {
+        nvmath::vec3f minimum;
+        nvmath::vec3f maximum;
+    };
+
     // The OBJ model
     struct ObjModel
     {
@@ -152,7 +158,7 @@ public:
     // #VKRay
     void initRayTracing();
     auto objectToVkGeometryKHR(const ObjModel& model);
-    void addCluster(uint32_t i, uint32_t clusterSize);
+    std::vector<Aabb> addCluster(const uint32_t i, const uint32_t clusterSize, const VkCommandBuffer& cmdBuf);
     void createBottomLevelAS();
     void createTopLevelAS();
     void createRtDescriptorSet();
@@ -194,15 +200,8 @@ public:
         float thickness{1.0f};
     };
 
-    struct Aabb
-    {
-        nvmath::vec3f minimum;
-        nvmath::vec3f maximum;
-    };
-
     struct Cluster
     {
-        nvmath::mat4 trans{nvmath::mat4f_id};
         uint32_t index{0};
         uint32_t count{0};
     };
@@ -210,6 +209,7 @@ public:
     nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR(uint32_t index);
 
     std::vector<Cluster> m_clusters;
+    std::vector<nvmath::mat4> m_trans;
     std::vector<Hair> m_hairs;            // All hairs
     nvvk::Buffer m_hairsBuffer;      // Buffer holding the hairs
     nvvk::Buffer m_clustersBuffer;
