@@ -46,6 +46,7 @@
 //   double time_elapse = timer.elapse();
 // }
 #include <chrono>
+#include <iostream>
 
 struct MilliTimer
 {
@@ -267,6 +268,7 @@ int main(int argc, char** argv)
       ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
       ImGuiH::Control::Info("", "", "(F10) Toggle Pane", ImGuiH::Control::Flags::Disabled);
       ImGuiH::Panel::End();
+//      std::cout << "Frametime: " << 1000.0f / ImGui::GetIO().Framerate << " ms, " << "FPS: " << ImGui::GetIO().Framerate << std::endl;
     }
 
     // Start rendering the scene
