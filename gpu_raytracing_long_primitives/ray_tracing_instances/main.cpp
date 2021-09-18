@@ -46,7 +46,7 @@
 //   double time_elapse = timer.elapse();
 // }
 #include <chrono>
-#include <iostream>
+#include <fstream>
 
 struct MilliTimer
 {
@@ -223,13 +223,12 @@ int main(int argc, char** argv)
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createSceneDescriptionBuffer();
-//  helloVk.updateDescriptorSet();
+  helloVk.updateDescriptorSet();
 
-    // #VKRay
-    helloVk.initRayTracing();
-    helloVk.createBottomLevelAS();
-    helloVk.updateDescriptorSet();
-    helloVk.createTopLevelAS();
+  // #VKRay
+  helloVk.initRayTracing();
+  helloVk.createBottomLevelAS();
+  helloVk.createTopLevelAS();
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
 
@@ -245,96 +244,104 @@ int main(int argc, char** argv)
   helloVk.setupGlfwCallbacks(window);
   ImGui_ImplGlfw_InitForVulkan(window, true);
 
+  // Log file for frametime 
+  std::ofstream timeFile;
+  timeFile.open("../media/LogData/timeFile.txt", std::ios::trunc);
+	
   // Main loop
-  while(!glfwWindowShouldClose(window))
+  while (!glfwWindowShouldClose(window))
   {
-    glfwPollEvents();
-    if(helloVk.isMinimized())
-      continue;
+	  glfwPollEvents();
+	  if (helloVk.isMinimized())
+		  continue;
 
-    // Start the Dear ImGui frame
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+	  // Start the Dear ImGui frame
+	  ImGui_ImplGlfw_NewFrame();
+	  ImGui::NewFrame();
 
+	  // Show UI window.
+	  if (helloVk.showGui())
+	  {
+		  ImGuiH::Panel::Begin();
+		  ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
+		  ImGui::Checkbox("Ray Tracer mode", &useRaytracer);  // Switch between raster and ray tracing
 
-    // Show UI window.
-    if(helloVk.showGui())
-    {
-      ImGuiH::Panel::Begin();
-      ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
-      ImGui::Checkbox("Ray Tracer mode", &useRaytracer);  // Switch between raster and ray tracing
+		  renderUI(helloVk);
+		  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		  ImGuiH::Control::Info("", "", "(F10) Toggle Pane", ImGuiH::Control::Flags::Disabled);
+		  ImGuiH::Panel::End();
 
-      renderUI(helloVk);
-      ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-      ImGuiH::Control::Info("", "", "(F10) Toggle Pane", ImGuiH::Control::Flags::Disabled);
-      ImGuiH::Panel::End();
-//      std::cout << "Frametime: " << 1000.0f / ImGui::GetIO().Framerate << " ms, " << "FPS: " << ImGui::GetIO().Framerate << std::endl;
-    }
+		  // Log file for frametime 
+		  timeFile << 1000.0f / ImGui::GetIO().Framerate << std::endl;
+	  }
 
-    // Start rendering the scene
-    helloVk.prepareFrame();
+	  // Start rendering the scene
+	  helloVk.prepareFrame();
 
-    // Start command buffer of this frame
-    auto                   curFrame = helloVk.getCurFrame();
-    const VkCommandBuffer& cmdBuf   = helloVk.getCommandBuffers()[curFrame];
+	  // Start command buffer of this frame
+	  auto                   curFrame = helloVk.getCurFrame();
+	  const VkCommandBuffer& cmdBuf = helloVk.getCommandBuffers()[curFrame];
 
-    VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer(cmdBuf, &beginInfo);
+	  VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	  vkBeginCommandBuffer(cmdBuf, &beginInfo);
 
-    // Updating camera buffer
-    helloVk.updateUniformBuffer(cmdBuf);
+	  // Updating camera buffer
+	  helloVk.updateUniformBuffer(cmdBuf);
 
-    // Clearing screen
-    std::array<VkClearValue, 2> clearValues{};
-    clearValues[0].color        = {{clearColor[0], clearColor[1], clearColor[2], clearColor[3]}};
-    clearValues[1].depthStencil = {1.0f, 0};
+	  // Clearing screen
+	  std::array<VkClearValue, 2> clearValues{};
+	  clearValues[0].color = { {clearColor[0], clearColor[1], clearColor[2], clearColor[3]} };
+	  clearValues[1].depthStencil = { 1.0f, 0 };
 
-    // Offscreen render pass
-    {
-      VkRenderPassBeginInfo offscreenRenderPassBeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-      offscreenRenderPassBeginInfo.clearValueCount = 2;
-      offscreenRenderPassBeginInfo.pClearValues    = clearValues.data();
-      offscreenRenderPassBeginInfo.renderPass      = helloVk.m_offscreenRenderPass;
-      offscreenRenderPassBeginInfo.framebuffer     = helloVk.m_offscreenFramebuffer;
-      offscreenRenderPassBeginInfo.renderArea      = {{0, 0}, helloVk.getSize()};
+	  // Offscreen render pass
+	  {
+		  VkRenderPassBeginInfo offscreenRenderPassBeginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		  offscreenRenderPassBeginInfo.clearValueCount = 2;
+		  offscreenRenderPassBeginInfo.pClearValues = clearValues.data();
+		  offscreenRenderPassBeginInfo.renderPass = helloVk.m_offscreenRenderPass;
+		  offscreenRenderPassBeginInfo.framebuffer = helloVk.m_offscreenFramebuffer;
+		  offscreenRenderPassBeginInfo.renderArea = { {0, 0}, helloVk.getSize() };
 
-      // Rendering Scene
-      if(useRaytracer)
-      {
-        helloVk.raytrace(cmdBuf, clearColor);
-      }
-      else
-      {
-        vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-        helloVk.rasterize(cmdBuf);
-        vkCmdEndRenderPass(cmdBuf);
-      }
-    }
+		  // Rendering Scene
+		  if (useRaytracer)
+		  {
+			  helloVk.raytrace(cmdBuf, clearColor);
+		  }
+		  else
+		  {
+			  vkCmdBeginRenderPass(cmdBuf, &offscreenRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+			  helloVk.rasterize(cmdBuf);
+			  vkCmdEndRenderPass(cmdBuf);
+		  }
+	  }
 
-    // 2nd rendering pass: tone mapper, UI
-    {
-      VkRenderPassBeginInfo postRenderPassBeginInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-      postRenderPassBeginInfo.clearValueCount = 2;
-      postRenderPassBeginInfo.pClearValues    = clearValues.data();
-      postRenderPassBeginInfo.renderPass      = helloVk.getRenderPass();
-      postRenderPassBeginInfo.framebuffer     = helloVk.getFramebuffers()[curFrame];
-      postRenderPassBeginInfo.renderArea      = {{0, 0}, helloVk.getSize()};
+	  // 2nd rendering pass: tone mapper, UI
+	  {
+		  VkRenderPassBeginInfo postRenderPassBeginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		  postRenderPassBeginInfo.clearValueCount = 2;
+		  postRenderPassBeginInfo.pClearValues = clearValues.data();
+		  postRenderPassBeginInfo.renderPass = helloVk.getRenderPass();
+		  postRenderPassBeginInfo.framebuffer = helloVk.getFramebuffers()[curFrame];
+		  postRenderPassBeginInfo.renderArea = { {0, 0}, helloVk.getSize() };
 
-      // Rendering tonemapper
-      vkCmdBeginRenderPass(cmdBuf, &postRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-      helloVk.drawPost(cmdBuf);
-      // Rendering UI
-      ImGui::Render();
-      ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
-      vkCmdEndRenderPass(cmdBuf);
-    }
+		  // Rendering tonemapper
+		  vkCmdBeginRenderPass(cmdBuf, &postRenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		  helloVk.drawPost(cmdBuf);
+		  // Rendering UI
+		  ImGui::Render();
+		  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuf);
+		  vkCmdEndRenderPass(cmdBuf);
+	  }
 
-    // Submit for display
-    vkEndCommandBuffer(cmdBuf);
-    helloVk.submitFrame();
+	  // Submit for display
+	  vkEndCommandBuffer(cmdBuf);
+	  helloVk.submitFrame();
   }
 
+  // Log file for frametime
+  timeFile.close();
+	
   // Cleanup
   vkDeviceWaitIdle(helloVk.getDevice());
 
