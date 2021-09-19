@@ -806,11 +806,14 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(uint32_t 
 float HelloVulkan::calculateCluster(const uint32_t i, const uint32_t clusterSize, Aabb& aabb, nvmath::mat4& trans, Cluster& cluster)
 {
     cluster = Cluster{i - clusterSize + 1, clusterSize};
-    nvmath::vec3 dir(0.0f);
+    nvmath::vec3 dir = m_hairs[cluster.index].v1.p - m_hairs[cluster.index].v0.p;
     for (uint32_t j = 0; j < cluster.count; ++j)
     {
         const auto& hair = m_hairs[j + cluster.index];
-        dir += (hair.v1.p - hair.v0.p);
+        // check whether the direction of the hair segment is calculated in the right direction (a hair segment has no beginning and ending)
+        nvmath::vec3 segDir = (hair.v1.p - hair.v0.p);
+        // if it is directed in the wrong direction, invert it
+        nvmath::dot(dir, segDir) < 0 ? dir -= segDir : dir += segDir;
     }
     float scale = nvmath::length(dir);
     dir = nvmath::normalize(dir);

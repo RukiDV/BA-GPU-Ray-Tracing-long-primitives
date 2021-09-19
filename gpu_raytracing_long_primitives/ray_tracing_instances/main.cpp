@@ -216,18 +216,18 @@ int main(int argc, char** argv)
   helloVk.loadHairModel(filename, myHairFile);
 
   double time_elapse = timer.elapse();
-  LOGI(" --> (%f)", time_elapse);
+//  LOGI(" --> (%f)", time_elapse);
 
   helloVk.createOffscreenRender();
   helloVk.createDescriptorSetLayout();
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createSceneDescriptionBuffer();
-  helloVk.updateDescriptorSet();
 
   // #VKRay
   helloVk.initRayTracing();
   helloVk.createBottomLevelAS();
+  helloVk.updateDescriptorSet();
   helloVk.createTopLevelAS();
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
