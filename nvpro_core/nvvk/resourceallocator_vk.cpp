@@ -17,6 +17,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <iostream>
 #include "resourceallocator_vk.hpp"
 
 #include "memallocator_dma_vk.hpp"
@@ -338,9 +339,14 @@ void ResourceAllocator::unmap(const Image& image)
 {
   m_memAlloc->unmap(image.memHandle);
 }
-
+//uint64_t memr = 0;
 MemHandle ResourceAllocator::AllocateMemory(const MemAllocateInfo& allocateInfo)
 {
+//    memr += allocateInfo.getMemoryRequirements().size;
+//    if (memr > 300000000)
+//    {
+//        std::cout << __FILE__ << ":" << __LINE__ << ", Memory usage: " << memr << std::endl;
+//    }
   return m_memAlloc->allocMemory(allocateInfo);
 }
 

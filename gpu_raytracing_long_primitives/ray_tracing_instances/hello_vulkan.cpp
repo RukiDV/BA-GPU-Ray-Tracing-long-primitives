@@ -923,38 +923,55 @@ void HelloVulkan::createBottomLevelAS()
     uint32_t clusterSize = 0;
     for (uint32_t i = 0; i < m_hairs.size() - 1; ++i)
     {
-        // TODO: try to look more than one hair ahead and reorder hairs as they fit
-        auto& hair = m_hairs[i];
-        auto& next_hair = m_hairs[i+1];
         assert(clusterSize <= i);
-        const nvmath::vec3f v0 = m_hairs[i-clusterSize].v1.p - m_hairs[i-clusterSize].v0.p;
-        const nvmath::vec3f v1 = next_hair.v1.p  - next_hair.v0.p;
         ++clusterSize;
-
-        // TODO: somehow there is a memory spike before it drops down, the smaller the clusters are the larger is this spike
-        // after the initialization of the program the memory usage decreases until it reaches a fix value after some time
+        Hair& hair = m_hairs[i];
+        float bestFillDegree = 0.0f;
+        uint32_t bestIndex = 0;
         Aabb aabb{};
         nvmath::mat4 trans{};
         Cluster cluster{};
-        float volume = calculateCluster(i + 1, clusterSize + 1, aabb, trans, cluster);
-
-        float segVol = 0;
-        for(int j = 0; j < cluster.count; j++)
+        for (uint32_t j = i; j < i + 20 && j < m_hairs.size() - 1; ++j)
         {
-            auto currentSeg = m_hairs[cluster.index + j];
-            segVol += PI * std::pow(currentSeg.thickness, 2.0f) * nvmath::length(currentSeg.v1.p - currentSeg.v0.p);
-        }
-        assert(segVol < volume);
-        float fillDegree = segVol / volume;
+            Hair h = m_hairs[i + 1];
+            m_hairs[i + 1] = m_hairs[j + 1];
 
+            // TODO: somehow there is a memory spike before it drops down, the smaller the clusters are the larger is this spike
+            // after the initialization of the program the memory usage decreases until it reaches a fix value after some time
+            float volume = calculateCluster(i + 1, clusterSize + 1, aabb, trans, cluster);
+            float segVol = 0;
+            for (int k = 0; k < cluster.count; ++k)
+            {
+                auto currentSeg = m_hairs[cluster.index + k];
+                segVol += PI * std::pow(currentSeg.thickness, 2.0f) * nvmath::length(currentSeg.v1.p - currentSeg.v0.p);
+            }
+//            assert(segVol < volume);
+            float fillDegree = segVol / volume;
+            if (fillDegree > bestFillDegree)
+            {
+                bestFillDegree = fillDegree;
+                bestIndex = j;
+            }
+            m_hairs[i + 1] = h;
+        }
+        // commented out code doesn't work
+//        Hair& next_hair = m_hairs[i + 1];
+//        const nvmath::vec3f v0 = m_hairs[i - clusterSize + 1].v1.p - m_hairs[i - clusterSize + 1].v0.p;
+//        const nvmath::vec3f v1 = next_hair.v1.p - next_hair.v0.p;
         // try what happens if the next hair segment gets added, if it leads to a bad cluster, end cluster and start a new one
-        if (/*nvmath::length(hair.v1.p - next_hair.v0.p) > 0.8f || nvmath::nv_abs(nvmath::dot(v0, v1)) < 0.05f || */fillDegree < 0.5f)
+        if (/*nvmath::length(hair.v1.p - next_hair.v0.p) > 0.8f || nvmath::nv_abs(nvmath::dot(v0, v1)) < 0.05f || */bestFillDegree < 0.5f)
         {
             // if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
             // rotation matrix from (0,1,0) to vector is transformation matrix of instance
             calculateCluster(i, clusterSize, aabb, trans, cluster);
             addCluster(aabb, trans, cluster, cmdBuf);
             clusterSize = 0;
+        }
+        else
+        {
+            Hair h = m_hairs[i + 1];
+            m_hairs[i + 1] = m_hairs[bestIndex + 1];
+            m_hairs[bestIndex + 1] = h;
         }
     }
     // add another cluster for the remaining segments
@@ -1010,6 +1027,7 @@ void HelloVulkan::createTopLevelAS()
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         tlas.emplace_back(rayInst);
     }
+    std::cout << "Cluster Count: " << m_clusters.size() << std::endl;
     m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
