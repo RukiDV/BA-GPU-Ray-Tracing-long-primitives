@@ -39,8 +39,9 @@
 #include "nvvk/shaders_vk.hpp"
 #include "nvvk/buffers_vk.hpp"
 #include "morton3D.h"
-#include <math.h>
+#include <cmath>
 
+#define PI 3.14159265358979323846
 
 extern std::vector<std::string> defaultSearchPaths;
 
@@ -815,7 +816,6 @@ float HelloVulkan::calculateCluster(const uint32_t i, const uint32_t clusterSize
         // if it is directed in the wrong direction, invert it
         nvmath::dot(dir, segDir) < 0 ? dir -= segDir : dir += segDir;
     }
-    float scale = nvmath::length(dir);
     dir = nvmath::normalize(dir);
     const nvmath::vec3f p0 = m_hairs[cluster.index].v0.p;
     nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit vector
@@ -828,8 +828,8 @@ float HelloVulkan::calculateCluster(const uint32_t i, const uint32_t clusterSize
     trans =
             nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
                           v.x * v.z * safe - v.y, 0.0f,
-                          (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
-                          (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y,
+                          (v.x * v.y * safe - v.z), ((-v.z * v.z - v.x * v.x) * safe + 1.0f),
+                          (v.y * v.z * safe + v.x), 0.0f, v.x * v.z * safe + v.y,
                           v.y * v.z * safe - v.x,
                           (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, p0.x, p0.y, p0.z, 1.0f);
     nvmath::mat4f trans_inv = nvmath::invert(trans);
@@ -842,7 +842,7 @@ float HelloVulkan::calculateCluster(const uint32_t i, const uint32_t clusterSize
         nvmath::vec3f begin = trans_inv * hair.v0.p;
         nvmath::vec3f end = trans_inv * hair.v1.p;
         dir = end - begin;
-        nvmath::vec3 extent = nvmath::vec3(hair.thickness / 2.0f) * (nvmath::vec3(1.0f) - nvmath::normalize(dir));
+        nvmath::vec3 extent = (nvmath::vec3(hair.thickness)) * (nvmath::vec3(1.0f) - nvmath::normalize(dir));
         max = nvmath::nv_max(max, nvmath::nv_max(begin + extent, end + extent));
         min = nvmath::nv_min(min, nvmath::nv_min(begin - extent, end - extent));
     }
@@ -936,12 +936,23 @@ void HelloVulkan::createBottomLevelAS()
         Aabb aabb{};
         nvmath::mat4 trans{};
         Cluster cluster{};
-        float volume = calculateCluster(i, clusterSize, aabb, trans, cluster);
+        float volume = calculateCluster(i + 1, clusterSize + 1, aabb, trans, cluster);
+
+        float segVol = 0;
+        for(int j = 0; j < cluster.count; j++)
+        {
+            auto currentSeg = m_hairs[cluster.index + j];
+            segVol += PI * std::pow(currentSeg.thickness, 2.0f) * nvmath::length(currentSeg.v1.p - currentSeg.v0.p);
+        }
+        assert(segVol < volume);
+        float fillDegree = segVol / volume;
+
         // try what happens if the next hair segment gets added, if it leads to a bad cluster, end cluster and start a new one
-        if (nvmath::length(hair.v1.p - next_hair.v0.p) > 0.8f || nvmath::nv_abs(nvmath::dot(v0, v1)) < 0.05f || volume > 0.005f)
+        if (/*nvmath::length(hair.v1.p - next_hair.v0.p) > 0.8f || nvmath::nv_abs(nvmath::dot(v0, v1)) < 0.05f || */fillDegree < 0.5f)
         {
             // if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
             // rotation matrix from (0,1,0) to vector is transformation matrix of instance
+            calculateCluster(i, clusterSize, aabb, trans, cluster);
             addCluster(aabb, trans, cluster, cmdBuf);
             clusterSize = 0;
         }

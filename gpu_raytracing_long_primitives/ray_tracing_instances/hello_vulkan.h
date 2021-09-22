@@ -204,7 +204,7 @@ public:
     {
         HairVertex v0;
         HairVertex v1;
-        float thickness{1.0f};
+        float thickness;
     };
 
     nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR(uint32_t index);
