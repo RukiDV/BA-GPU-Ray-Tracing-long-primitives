@@ -362,7 +362,8 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     }
     pointIndex += (segments[i] + 1) * 3;
   }
-
+  nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
+  VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
   nvmath::vec3 p0     = nvmath::vec3(0.0f, 0.0f, 0.0f);
   nvmath::vec3 p1     = nvmath::vec3(0.0f, 1.0f, 0.0f);
   nvmath::vec3 a      = p1 - p0;
