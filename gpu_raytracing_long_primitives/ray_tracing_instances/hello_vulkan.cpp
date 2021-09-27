@@ -308,24 +308,22 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     default:
       printf("Hair file \"%s\" loaded.\n", filename);
   }
-  int hairCount  = (hairfile.GetHeader().hair_count);
-  int pointCount = (hairfile.GetHeader().point_count);
+  uint32_t hairCount  = (hairfile.GetHeader().hair_count);
+  uint32_t pointCount = (hairfile.GetHeader().point_count);
   printf("Number of hair strands = %d\n", hairCount);
   printf("Number of hair points = %d\n", pointCount);
-  float* dirs = new float[pointCount * 3];
+  float* dirs = new float[pointCount*3];
   // Compute directions
   if(hairfile.FillDirectionArray(dirs) == 0)
   {
     printf("Error: Cannot compute hair directions!\n");
   }
-  nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
-  VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
 
   std::vector<Aabb>     hairAabbs;
   int                   pointIndex = 0;
   float*                vertices   = hairfile.GetPointsArray();
   float*                colors     = hairfile.GetColorsArray();
-  const unsigned short* segments   = hairfile.GetSegmentsArray();
+  unsigned short* segments   = hairfile.GetSegmentsArray();
   for(int i = 0; i < hairCount; i++)
   {
     for(int j = 0; j < segments[i]; j++)
@@ -360,7 +358,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
           trans, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
           nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]),
           nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
-          nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]), 0.05f});
+          nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3], dirs[pointIndex + 5 + j * 3]), 0.05f});
     }
     pointIndex += (segments[i] + 1) * 3;
   }
