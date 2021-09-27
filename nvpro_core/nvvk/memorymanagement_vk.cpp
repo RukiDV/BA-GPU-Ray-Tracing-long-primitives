@@ -20,7 +20,6 @@
 
 #include <algorithm>
 #include <string>
-#include <iostream>
 
 #include "debug_util_vk.hpp"
 #include "error_vk.hpp"
@@ -112,14 +111,9 @@ DMAMemoryHandle* castDMAMemoryHandle(MemHandle memHandle)
 
   return dmaMemHandle;
 }
-uint64_t mem = 0;
+
 MemHandle DeviceMemoryAllocator::allocMemory(const MemAllocateInfo& allocInfo, VkResult *pResult)
 {
-    mem += allocInfo.getMemoryRequirements().size;
-    if (mem > 300000000)
-    {
-        std::cout << __FILE__ << ":" << __LINE__ << ", Memory usage: " << mem << std::endl;
-    }
   BakedAllocateInfo bakedInfo;
   fillBakedAllocateInfo(getMemoryProperties(), allocInfo, bakedInfo);
   State state = m_defaultState;
@@ -474,7 +468,7 @@ const VkPhysicalDeviceMemoryProperties& DeviceMemoryAllocator::getMemoryProperti
 {
   return m_memoryProperties;
 }
-
+    uint64_t mem = 0;
 AllocationID DeviceMemoryAllocator::allocInternal(const VkMemoryRequirements&          memReqs,
                                                   VkMemoryPropertyFlags                memProps,
                                                   bool                                 isLinear,
@@ -491,6 +485,10 @@ AllocationID DeviceMemoryAllocator::allocInternal(const VkMemoryRequirements&   
     result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
     return AllocationID();
   }
+
+
+    mem += memInfo.allocationSize;
+    memoryLog << mem << std::endl;
 
   float priority = m_supportsPriority ? state.priority : DEFAULT_PRIORITY;
   bool  isFirst  = !dedicated;

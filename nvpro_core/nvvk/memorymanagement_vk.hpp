@@ -29,6 +29,7 @@
 
 #include <vulkan/vulkan_beta.h>
 #include <vulkan/vulkan_core.h>
+#include <fstream>
 
 namespace nvvk {
 
@@ -165,6 +166,7 @@ class DeviceMemoryAllocator : public MemAllocator
 {
 
 public:
+    std::ofstream memoryLog;
   static const float DEFAULT_PRIORITY;
 
   DeviceMemoryAllocator(DeviceMemoryAllocator const&) = delete;
@@ -178,6 +180,7 @@ public:
     assert(m_blocks.empty() || m_keepFirst);
 #endif
     deinit();
+      memoryLog.close();
   }
 
 
@@ -189,6 +192,7 @@ public:
                         VkDeviceSize     blockSize = NVVK_DEFAULT_MEMORY_BLOCKSIZE,
                         VkDeviceSize     maxSize   = 0)
   {
+      memoryLog.open("../media/LogData/morton/memory.log", std::ios::trunc);
     init(device, physicalDevice, blockSize, maxSize);
   }
 

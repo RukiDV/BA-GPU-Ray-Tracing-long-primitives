@@ -124,16 +124,16 @@ void main()
             }
         }
 
-        float randR = gl_InstanceID * 7;
-        float randG = gl_InstanceID * 5;
-        float randB = gl_InstanceID * 3;
-        randR = fract(sin(dot(vec2(randR, gl_InstanceID), vec2(12.9898, 78.233))) * 43758.5453);
-        randG = fract(sin(dot(vec2(randG, gl_InstanceID), vec2(12.9898, 78.233))) * 43758.5453);
-        randB = fract(sin(dot(vec2(randB, gl_InstanceID), vec2(12.9898, 78.233))) * 43758.5453);
+        float randR = (gl_InstanceID + 6);
+        float randG = (gl_InstanceID + 4);
+        float randB = (gl_InstanceID + 8);
+        randR = fract(sin(dot(vec2(randG, randB), vec2(12.9898, 78.233))) * 43758.5453);
+        randG = fract(sin(dot(vec2(randR, randG), vec2(12.9898, 78.233))) * 43758.5453);
+        randB = fract(sin(dot(vec2(randB, randR), vec2(12.9898, 78.233))) * 43758.5453);
         prd.hitValue = vec3(randR, randG, randB);//vec3(lightIntensity * (attenuation * color + diffuse));
     }
     else
     {
-        prd.hitValue = vec3(1.0, 0.0, 1.0);
+        prd.hitValue = vec3(0.0, 0.0, 0.0);
     }
 }

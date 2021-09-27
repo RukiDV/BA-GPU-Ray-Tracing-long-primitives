@@ -47,6 +47,7 @@
 // }
 #include <chrono>
 #include <fstream>
+#include <filesystem>
 
 struct MilliTimer
 {
@@ -106,6 +107,11 @@ static int const SAMPLE_HEIGHT = 720;
 //
 int main(int argc, char** argv)
 {
+    std::filesystem::path logPath("../media/LogData/morton/");
+    if (!std::filesystem::exists(logPath))
+    {
+        std::filesystem::create_directory(logPath);
+    }
   UNUSED(argc);
 
   // Setup GLFW window
@@ -246,7 +252,7 @@ int main(int argc, char** argv)
 
   // Log file for frametime 
   std::ofstream timeFile;
-  timeFile.open("../media/LogData/timeFile.txt", std::ios::trunc);
+  timeFile.open("../media/LogData/morton/timeFile.log", std::ios::trunc);
 	
   // Main loop
   while (!glfwWindowShouldClose(window))

@@ -164,7 +164,7 @@ public:
     // #VKRay
     void initRayTracing();
     auto objectToVkGeometryKHR(const ObjModel& model);
-    float calculateCluster(const uint32_t i, const uint32_t clusterSize, Aabb& aabb, nvmath::mat4& trans, Cluster& cl);
+    float calculateCluster(Aabb& aabb, nvmath::mat4& trans, const Cluster& cluster);
     void addCluster(Aabb& aabb, nvmath::mat4& trans, Cluster& cluster, const VkCommandBuffer& cmdBuf);
     void createBottomLevelAS();
     void createTopLevelAS();
