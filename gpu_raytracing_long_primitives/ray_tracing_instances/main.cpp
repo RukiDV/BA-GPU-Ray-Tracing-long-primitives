@@ -107,7 +107,7 @@ static int const SAMPLE_HEIGHT = 720;
 //
 int main(int argc, char** argv)
 {
-    std::filesystem::path logPath("../media/LogData/main/");
+    std::filesystem::path logPath("../media/LogData/baseline/");
     if (!std::filesystem::exists(logPath))
     {
         std::filesystem::create_directory(logPath);
@@ -252,7 +252,7 @@ int main(int argc, char** argv)
 
   // Log file for frametime 
   std::ofstream timeFile;
-  timeFile.open("../media/LogData/main/timeFile.txt", std::ios::trunc);
+  timeFile.open("../media/LogData/baseline/timeFile.log", std::ios::trunc);
 	
   // Main loop
   while (!glfwWindowShouldClose(window))

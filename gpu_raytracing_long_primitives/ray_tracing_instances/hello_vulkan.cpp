@@ -356,9 +356,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 #endif
 
 #if 1
-    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(cmdBuf, hairAabbs,
-                                                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                                                        | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
   m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   m_hairsAabbBuffer = m_alloc.createBuffer(cmdBuf, hairAabbs,
                                                       VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
