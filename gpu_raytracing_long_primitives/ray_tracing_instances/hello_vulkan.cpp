@@ -800,7 +800,7 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 
   VkAccelerationStructureBuildRangeInfoKHR offset{};
   offset.firstVertex     = 0;
-  offset.primitiveCount  = 1;
+  offset.primitiveCount  = m_hairs.size();
   offset.primitiveOffset = 0;
   offset.transformOffset = 0;
 
@@ -855,7 +855,6 @@ void HelloVulkan::createTopLevelAS()
     rayInst.hitGroupId       = 1;
     rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     tlas.emplace_back(rayInst);
-  }
   m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
