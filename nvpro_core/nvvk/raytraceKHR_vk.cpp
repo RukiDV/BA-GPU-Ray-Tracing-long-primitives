@@ -1,3 +1,4 @@
+#include <iostream>
 #include "raytraceKHR_vk.hpp"
 
 void nvvk::RaytracingBuilderKHR::setup(const VkDevice& device, nvvk::ResourceAllocator* allocator, uint32_t queueIndex)
@@ -251,6 +252,8 @@ void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBui
   {
     geometryInstances.push_back(instanceToVkGeometryInstanceKHR(inst));
   }
+
+  std::cout << std::endl << __FILE__ << ":" << __LINE__ << " Size of TLAS instances: " << sizeof(VkAccelerationStructureInstanceKHR) * geometryInstances.size() << std::endl;
 
   // Create a buffer holding the actual instance data (matrices++) for use by the AS builder
   VkDeviceSize instanceDescsSizeInBytes = instances.size() * sizeof(VkAccelerationStructureInstanceKHR);

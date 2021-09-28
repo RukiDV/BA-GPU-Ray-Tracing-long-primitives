@@ -66,10 +66,10 @@ void main()
 
   float tHitB = 10000.0;
 
-	Hair hair = allHairs[gl_InstanceID];
+	Hair hair = allHairs[gl_PrimitiveID];
 	tHitB = iHair(ray, hair.p0, hair.p1, hair.thickness);
 
   // Report hit point
-  if(tHitB < 9999)
+//  if(tHitB < 9999)
     reportIntersectionEXT(tHitB, KIND_HAIR);
 }
