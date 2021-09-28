@@ -78,6 +78,12 @@ public:
         nvmath::vec3f maximum;
     };
 
+    struct Cluster
+    {
+        uint32_t index{0};
+        uint32_t count{0};
+    };
+
     // The OBJ model
     struct ObjModel
     {
@@ -158,7 +164,8 @@ public:
     // #VKRay
     void initRayTracing();
     auto objectToVkGeometryKHR(const ObjModel& model);
-    std::vector<Aabb> addCluster(const uint32_t i, const uint32_t clusterSize, const VkCommandBuffer& cmdBuf);
+    float calculateCluster(nvmath::mat4& trans, const Cluster& cluster);
+    void addCluster(nvmath::mat4& trans, Cluster& cluster);
     void createBottomLevelAS();
     void createTopLevelAS();
     void createRtDescriptorSet();
@@ -200,13 +207,7 @@ public:
         float thickness{1.0f};
     };
 
-    struct Cluster
-    {
-        uint32_t index{0};
-        uint32_t count{0};
-    };
-
-    nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR(uint32_t index);
+    nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR();
 
     std::vector<Cluster> m_clusters;
     std::vector<nvmath::mat4> m_trans;
