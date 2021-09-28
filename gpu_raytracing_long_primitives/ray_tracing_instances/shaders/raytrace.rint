@@ -38,7 +38,7 @@ float iHair(Ray r, in mat4 trans, float thickness)
 
     float a = 1.0 - card*card;
     float b = dot(oc, r.direction) - caoc*card;
-    float c = dot(oc, oc) - caoc*caoc - (thickness/2)*(thickness/2);
+    float c = dot(oc, oc) - caoc*caoc - (thickness)*(thickness);
     float h = b*b - a*c;
     if (h<0.0) return 10000.0;
     h = sqrt(h);
@@ -68,9 +68,8 @@ void main()
     ray.direction = gl_WorldRayDirectionEXT;
 
     float tHitB = 10000.0;
-
-	Hair hair = allHairs[gl_PrimitiveID];
-	tHitB = iHair(ray, hair.p0, hair.p1, hair.thickness);
+    Hair hair = allHairs[gl_InstanceID];
+    tHitB = iHair(ray, hair.trans, hair.thickness);
 
   // Report hit point
 //  if(tHitB < 9999)

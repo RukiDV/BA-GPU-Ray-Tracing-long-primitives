@@ -320,54 +320,64 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
   }
 
   std::vector<Aabb>     hairAabbs;
-  int                   pointIndex = 0;
   float*                vertices   = hairfile.GetPointsArray();
   float*                colors     = hairfile.GetColorsArray();
   unsigned short* segments   = hairfile.GetSegmentsArray();
-  for(int i = 0; i < hairCount; i++)
+  for (uint32_t x = 0; x < 3; ++x)
   {
-    for(int j = 0; j < segments[i]; j++)
-    {
-      nvmath::vec3 p0 =
-          nvmath::vec3(vertices[pointIndex + j * 3], vertices[pointIndex + 1 + j * 3], vertices[pointIndex + 2 + j * 3]) / 7.0f;
-      nvmath::vec3 p1 =
-          nvmath::vec3(vertices[pointIndex + 3 + j * 3], vertices[pointIndex + 4 + j * 3], vertices[pointIndex + 5 + j * 3]) / 7.0f;
+      for (uint32_t y = 0; y < 2; ++y)
+      {
+      int                   pointIndex = 0;
+      for (uint32_t i = 0; i < hairCount; i++)
+      {
+          for (uint32_t j = 0; j < segments[i]; j++)
+          {
+              nvmath::vec3 p0 =
+                      nvmath::vec3(vertices[pointIndex + j * 3] + x * 70, vertices[pointIndex + 1 + j * 3],
+                                   vertices[pointIndex + 2 + j * 3] + y * 120) / 7.0f;
+              nvmath::vec3 p1 =
+                      nvmath::vec3(vertices[pointIndex + 3 + j * 3] + x * 70, vertices[pointIndex + 4 + j * 3],
+                                   vertices[pointIndex + 5 + j * 3] + y * 120) / 7.0f;
 
-      // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
-      float        scale = nvmath::length(p1 - p0);
-      float        x     = p0.x;
-      float        y     = p0.y;
-      float        z     = p0.z;
-      nvmath::vec3 unit  = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
-      nvmath::vec3 dir   = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
-      nvmath::vec3 v     = nvmath::cross(unit, dir);
-      float        c     = nvmath::dot(unit, dir);
-      float        safe  = 1.0f / (1.0f + c);
-      // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
-      // smashed into one big matrix because adding the single matrices didn't work
-      nvmath::mat4f trans =
-          nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z, v.x * v.z * safe - v.y, 0.0f,
-                        (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
-                        (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y, v.y * v.z * safe - v.x,
-                        (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, x, y, z, 1.0f);
+              // TODO integrate m_transforms in m_hairs by replacing p0 and p1 (every segment is just a transformed unit cylinder)
+              float scale = nvmath::length(p1 - p0);
+              nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+              nvmath::vec3 dir = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
+              nvmath::vec3 v = nvmath::cross(unit, dir);
+              float c = nvmath::dot(unit, dir);
+              float safe = 1.0f / (1.0f + c);
+              // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+              // smashed into one big matrix because adding the single matrices didn't work
+              nvmath::mat4f trans =
+                      nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
+                                    v.x * v.z * safe - v.y, 0.0f,
+                                    (v.x * v.y * safe - v.z) * scale, ((-v.z * v.z - v.x * v.x) * safe + 1.0f) * scale,
+                                    (v.y * v.z * safe + v.x) * scale, 0.0f, v.x * v.z * safe + v.y,
+                                    v.y * v.z * safe - v.x,
+                                    (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, p0.x, p0.y, p0.z, 1.0f);
 
+              hairAabbs.clear();
 
-      hairAabbs.clear();
-
-      m_hairs.push_back(Hair{
-          trans, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3], colors[pointIndex + 2 + j * 3]),
-          nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3], colors[pointIndex + 5 + j * 3]),
-          nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
-          nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3], dirs[pointIndex + 5 + j * 3]), 0.05f});
-    }
-    pointIndex += (segments[i] + 1) * 3;
+              m_hairs.push_back(Hair{
+                      trans, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3],
+                                           colors[pointIndex + 2 + j * 3]),
+                      nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3],
+                                    colors[pointIndex + 5 + j * 3]),
+                      nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3],
+                                    dirs[pointIndex + 2 + j * 3]),
+                      nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3],
+                                    dirs[pointIndex + 5 + j * 3]), 0.03f});
+          }
+          pointIndex += (segments[i] + 1) * 3;
+      }
+      }
   }
   nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
   VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
   nvmath::vec3 p0     = nvmath::vec3(0.0f, 0.0f, 0.0f);
   nvmath::vec3 p1     = nvmath::vec3(0.0f, 1.0f, 0.0f);
   nvmath::vec3 a      = p1 - p0;
-  nvmath::vec3 extent = nvmath::vec3(0.05f / 2.0f) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
+  nvmath::vec3 extent = nvmath::vec3(0.03f) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
   Aabb         hairAabb{nvmath::nv_min(p0 - extent, p1 - extent), nvmath::nv_max(p0 + extent, p1 + extent)};
   hairAabbs.emplace_back(hairAabb);
   m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(
@@ -800,7 +810,7 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 
   VkAccelerationStructureBuildRangeInfoKHR offset{};
   offset.firstVertex     = 0;
-  offset.primitiveCount  = m_hairs.size();
+  offset.primitiveCount  = 1;
   offset.primitiveOffset = 0;
   offset.transformOffset = 0;
 
@@ -846,16 +856,17 @@ void HelloVulkan::createTopLevelAS()
     tlas.emplace_back(rayInst);
   }*/
   // hairs
-  for(int i = 0; i < m_hairs.size(); ++i)
+  for(uint32_t i = 0; i < m_hairs.size(); ++i)
   {
-    nvvk::RaytracingBuilderKHR::Instance rayInst;
-    rayInst.transform        = m_hairs[i].trans;
-    rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = 0;
-    rayInst.hitGroupId       = 1;
-    rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    tlas.emplace_back(rayInst);
-  m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+      nvvk::RaytracingBuilderKHR::Instance rayInst;
+      rayInst.transform = m_hairs[i].trans;
+      rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
+      rayInst.blasId = 0;
+      rayInst.hitGroupId = 1;
+      rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+      tlas.emplace_back(rayInst);
+  }
+    m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
 //--------------------------------------------------------------------------------------------------

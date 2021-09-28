@@ -192,7 +192,7 @@ namespace nvvk {
                               VkDeviceSize     blockSize = NVVK_DEFAULT_MEMORY_BLOCKSIZE,
                               VkDeviceSize     maxSize   = 0)
         {
-            memoryLog.open("../media/LogData/main/memory.log", std::ios::trunc);
+            memoryLog.open("../media/LogData/instancing/memory.log", std::ios::trunc);
             init(device, physicalDevice, blockSize, maxSize);
         }
 
