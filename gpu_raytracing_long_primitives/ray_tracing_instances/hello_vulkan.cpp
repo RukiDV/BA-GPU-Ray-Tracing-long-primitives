@@ -356,6 +356,9 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 #endif
 
 #if 1
+    m_hairsAabbBuffer.emplace_back(m_alloc.createBuffer(cmdBuf, hairAabbs,
+                                                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+                                                        | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
   m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   m_hairsAabbBuffer = m_alloc.createBuffer(cmdBuf, hairAabbs,
                                                       VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
@@ -808,7 +811,6 @@ void HelloVulkan::createBottomLevelAS()
     allBlas.emplace_back(blas);
   }*/
   // hairs
-
   auto blasHair = hairToVkGeometryKHR();
     allBlas.emplace_back(blasHair);
 
@@ -830,16 +832,14 @@ void HelloVulkan::createTopLevelAS()
     tlas.emplace_back(rayInst);
   }*/
   // hairs
-  {
     nvvk::RaytracingBuilderKHR::Instance rayInst;
     rayInst.transform =
         nvmath::mat4f({1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f});  // Position of the instance
     rayInst.instanceCustomId = static_cast<uint32_t>(tlas.size());  // gl_InstanceCustomIndexEXT
-    rayInst.blasId           = static_cast<uint32_t>(tlas.size());
+    rayInst.blasId           = 0;
     rayInst.hitGroupId       = 1;
     rayInst.flags            = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
     tlas.emplace_back(rayInst);
-  }
   m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
