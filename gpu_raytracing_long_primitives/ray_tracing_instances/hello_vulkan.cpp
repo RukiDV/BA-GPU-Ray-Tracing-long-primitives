@@ -865,7 +865,7 @@ inline float getHalfCylinderSurface(const HelloVulkan::Hair& seg)
 //--------------------------------------------------------------------------------------------------
 //
 //
-void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
+void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile, std::ofstream& clusterLog, float minFillDegree, float maxFillDegreeDiff)
 {
     nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
     VkCommandBuffer cmdBuf = genCmdBuf.createCommandBuffer();
@@ -894,11 +894,12 @@ void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
         float fillDegree = allSegSur / surface;
         fillDegreeImproved |= oldFillDegree < fillDegree;
         // end cluster either if it reached its maximum size or if the next segment is too far away
-        if (fillDegree < 0.4f || (fillDegreeImproved && (oldFillDegree - fillDegree) > 0.05f))
+        if (fillDegree < minFillDegree || (fillDegreeImproved && (oldFillDegree - fillDegree) > maxFillDegreeDiff))
         {
             --cluster.count;
             calculateCluster(trans, cluster);
             addCluster(trans, cluster);
+            clusterLog << cluster.count << std::endl;
             oldAllSegSur = getHalfCylinderSurface(m_hairs[i + 1]);
             oldFillDegree = 2.0f * PI / 8.0f;
             cluster = Cluster{cluster.index + cluster.count, 1};
@@ -960,6 +961,7 @@ void HelloVulkan::createTopLevelAS(std::ofstream& infoFile)
     }
     infoFile << "Segment count: " << m_hairs.size() << std::endl;
     infoFile << "Cluster count: " << m_clusters.size() << std::endl;
+    infoFile << "Avg. cluster size: " << std::to_string(float(m_hairs.size()) / float(m_clusters.size())) << std::endl;
     m_rtBuilder.buildTlas(infoFile, tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 

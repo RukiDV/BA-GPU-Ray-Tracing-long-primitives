@@ -323,7 +323,6 @@ void nvvk::RaytracingBuilderKHR::buildTlas(std::ofstream& infoFile, const std::v
   VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(m_device, &bufferInfo);
 
   infoFile << "Size of TLAS: " << (sizeInfo.accelerationStructureSize) << std::endl;
-  infoFile << "Size of TLAS scratch buffer: " << (sizeInfo.buildScratchSize) << std::endl;
 
   // Update build information
   buildInfo.srcAccelerationStructure  = update ? m_tlas.as.accel : VK_NULL_HANDLE;
