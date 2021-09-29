@@ -192,7 +192,7 @@ public:
                         VkDeviceSize     blockSize = NVVK_DEFAULT_MEMORY_BLOCKSIZE,
                         VkDeviceSize     maxSize   = 0)
   {
-      memoryLog.open("../media/LogData/strandClustering/memory.log", std::ios::trunc);
+      memoryLog.open("../media/LogData/strand/memory.log", std::ios::trunc);
     init(device, physicalDevice, blockSize, maxSize);
   }
 

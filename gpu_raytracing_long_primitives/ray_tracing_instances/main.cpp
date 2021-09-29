@@ -101,16 +101,15 @@ void renderUI(HelloVulkan& helloVk)
 static int const SAMPLE_WIDTH  = 1280;
 static int const SAMPLE_HEIGHT = 720;
 
-
 //--------------------------------------------------------------------------------------------------
 // Application Entry
 //
 int main(int argc, char** argv)
 {
-    std::filesystem::path logPath("../media/LogData/strandClustering/");
+    std::filesystem::path logPath(logPathName);
     if (!std::filesystem::exists(logPath))
     {
-        std::filesystem::create_directory(logPath);
+        std::filesystem::create_directories(logPath);
     }
   UNUSED(argc);
 
@@ -221,6 +220,9 @@ int main(int argc, char** argv)
   const char* filename = "../media/scenes/dark.hair";
   helloVk.loadHairModel(filename, myHairFile);
 
+  std::ofstream infoFile;
+  infoFile.open(logPathName + "info.log", std::ios::trunc);
+
   double time_elapse = timer.elapse();
 //  LOGI(" --> (%f)", time_elapse);
 
@@ -232,9 +234,9 @@ int main(int argc, char** argv)
 
   // #VKRay
   helloVk.initRayTracing();
-  helloVk.createBottomLevelAS();
+  helloVk.createBottomLevelAS(infoFile);
   helloVk.updateDescriptorSet();
-  helloVk.createTopLevelAS();
+  helloVk.createTopLevelAS(infoFile);
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
 
@@ -242,17 +244,19 @@ int main(int argc, char** argv)
   helloVk.createPostPipeline();
   helloVk.updatePostDescriptorSet();
 
+  infoFile.close();
 
   nvmath::vec4f clearColor   = nvmath::vec4f(1, 1, 1, 1.00f);
   bool          useRaytracer = true;
-
+  uint32_t fileNumber = 1;
+  bool isLogging = false;
+  bool startLogging = false;
 
   helloVk.setupGlfwCallbacks(window);
   ImGui_ImplGlfw_InitForVulkan(window, true);
 
-  // Log file for frametime 
+  // Log file for frametime
   std::ofstream timeFile;
-  timeFile.open("../media/LogData/strandClustering/timeFile.log", std::ios::trunc);
 	
   // Main loop
   while (!glfwWindowShouldClose(window))
@@ -269,6 +273,7 @@ int main(int argc, char** argv)
 	  if (helloVk.showGui())
 	  {
 		  ImGuiH::Panel::Begin();
+          ImGui::Checkbox("Log", &startLogging);
 		  ImGui::ColorEdit3("Clear color", reinterpret_cast<float*>(&clearColor));
 		  ImGui::Checkbox("Ray Tracer mode", &useRaytracer);  // Switch between raster and ray tracing
 
@@ -277,8 +282,22 @@ int main(int argc, char** argv)
 		  ImGuiH::Control::Info("", "", "(F10) Toggle Pane", ImGuiH::Control::Flags::Disabled);
 		  ImGuiH::Panel::End();
 
-		  // Log file for frametime 
-		  timeFile << 1000.0f / ImGui::GetIO().Framerate << std::endl;
+          if (startLogging && !isLogging)
+          {
+              timeFile.open(logPathName + std::to_string(fileNumber) + "timeFile.log", std::ios::trunc);
+              ++fileNumber;
+              isLogging = true;
+          }
+          if (isLogging)
+          {
+              // Log file for frametime
+              timeFile << 1000.0f / ImGui::GetIO().Framerate << std::endl;
+          }
+          if (!startLogging && isLogging)
+          {
+              timeFile.close();
+              isLogging = false;
+          }
 	  }
 
 	  // Start rendering the scene
@@ -344,9 +363,6 @@ int main(int argc, char** argv)
 	  vkEndCommandBuffer(cmdBuf);
 	  helloVk.submitFrame();
   }
-
-  // Log file for frametime
-  timeFile.close();
 	
   // Cleanup
   vkDeviceWaitIdle(helloVk.getDevice());
