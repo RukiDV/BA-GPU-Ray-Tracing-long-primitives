@@ -101,13 +101,12 @@ void renderUI(HelloVulkan& helloVk)
 static int const SAMPLE_WIDTH  = 1280;
 static int const SAMPLE_HEIGHT = 720;
 
-
 //--------------------------------------------------------------------------------------------------
 // Application Entry
 //
 int main(int argc, char** argv)
 {
-    std::filesystem::path logPath("../media/LogData/morton/");
+    std::filesystem::path logPath(logPathName);
     if (!std::filesystem::exists(logPath))
     {
         std::filesystem::create_directory(logPath);
@@ -221,6 +220,9 @@ int main(int argc, char** argv)
   const char* filename = "../media/scenes/dark.hair";
   helloVk.loadHairModel(filename, myHairFile);
 
+  std::ofstream infoFile;
+  infoFile.open(logPathName + "info.log", std::ios::trunc);
+
   double time_elapse = timer.elapse();
 //  LOGI(" --> (%f)", time_elapse);
 
@@ -232,9 +234,9 @@ int main(int argc, char** argv)
 
   // #VKRay
   helloVk.initRayTracing();
-  helloVk.createBottomLevelAS();
+  helloVk.createBottomLevelAS(infoFile);
   helloVk.updateDescriptorSet();
-  helloVk.createTopLevelAS();
+  helloVk.createTopLevelAS(infoFile);
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
 
@@ -242,6 +244,7 @@ int main(int argc, char** argv)
   helloVk.createPostPipeline();
   helloVk.updatePostDescriptorSet();
 
+  infoFile.close();
 
   nvmath::vec4f clearColor   = nvmath::vec4f(1, 1, 1, 1.00f);
   bool          useRaytracer = true;
@@ -252,7 +255,7 @@ int main(int argc, char** argv)
 
   // Log file for frametime 
   std::ofstream timeFile;
-  timeFile.open("../media/LogData/morton/timeFile.log", std::ios::trunc);
+  timeFile.open(logPathName + "timeFile.log", std::ios::trunc);
 	
   // Main loop
   while (!glfwWindowShouldClose(window))

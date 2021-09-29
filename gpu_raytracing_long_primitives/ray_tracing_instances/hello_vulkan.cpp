@@ -868,7 +868,7 @@ inline float getHalfCylinderSurface(const HelloVulkan::Hair& seg)
 //
 //
 #define grid_size 2097151 // (2^21)-1 resolution of morton code
-void HelloVulkan::createBottomLevelAS()
+void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
 {
     // TODO: going through all hairs, define for every hair the morton code(calculate in which grid it goes),
     // TODO: grid cells have morton code and finally you get a list with morton-Codes(pair from code and hair), use for sorting the hair list
@@ -926,10 +926,10 @@ void HelloVulkan::createBottomLevelAS()
     float oldAllSegSur = getHalfCylinderSurface(m_hairs[0]);
     bool fillDegreeImproved = false;
     std::ofstream clusterLog;
-    clusterLog.open("../media/LogData/morton/cluster.log", std::ios::trunc);
+    clusterLog.open(logPathName + "cluster.log", std::ios::trunc);
     for (uint32_t i = 0; i < m_hairs.size() - 1; ++i)
     {
-        clusterLog << "Progress: " << i << "/" << m_hairs.size() << "; cluster index: " << cluster.index << "; cluster size: " << cluster.count << std::endl;
+//        clusterLog << "Progress: " << i << "/" << m_hairs.size() << "; cluster index: " << cluster.index << "; cluster size: " << cluster.count << std::endl;
         Hair& hair = m_hairs[i];
         ++cluster.count;
         float bestFillDegree = 0.0f;
@@ -940,8 +940,6 @@ void HelloVulkan::createBottomLevelAS()
             Hair h = m_hairs[i + 1];
             m_hairs[i + 1] = m_hairs[j];
 
-            // TODO: somehow there is a memory spike before it drops down, the smaller the clusters are the larger is this spike
-            // after the initialization of the program the memory usage decreases until it reaches a fix value after some time
             float surface = calculateCluster(trans, cluster);
             assert(cluster.index + cluster.count - 1 == i + 1);
             float allSegSur = oldAllSegSur + getHalfCylinderSurface(m_hairs[i + 1]);
@@ -960,13 +958,14 @@ void HelloVulkan::createBottomLevelAS()
         // try what happens if the next hair segment gets added, if it leads to a bad cluster, end cluster and start a new one
         // total fillDegree of the cluster would get too bad
         // overlapping segments lead too high fillDegrees, so use difference of fillDegrees as soon as fillDegree improved once
-        if (bestFillDegree < 0.4f || (fillDegreeImproved && (oldFillDegree - bestFillDegree) > 0.05f))
+        if (bestFillDegree < minFillDegree || (fillDegreeImproved && (oldFillDegree - bestFillDegree) > maxFillDegreeDiff))
         {
             // if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
             // rotation matrix from (0,1,0) to vector is transformation matrix of instance
             --cluster.count;
             calculateCluster(trans, cluster);
             addCluster(trans, cluster);
+            clusterLog << cluster.count << std::endl;
             oldAllSegSur = getHalfCylinderSurface(m_hairs[i + 1]);
             oldFillDegree = 2.0f * PI / 8.0f;
             cluster = Cluster{cluster.index + cluster.count, 1};
@@ -1003,10 +1002,10 @@ void HelloVulkan::createBottomLevelAS()
 
     allBlas.emplace_back(hairToVkGeometryKHR());
 
-    m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+    m_rtBuilder.buildBlas(infoFile, allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
-void HelloVulkan::createTopLevelAS()
+void HelloVulkan::createTopLevelAS(std::ofstream& infoFile)
 {
     std::vector<nvvk::RaytracingBuilderKHR::Instance> tlas;
     tlas.reserve(m_objInstance.size() + m_hairs.size());
@@ -1031,8 +1030,9 @@ void HelloVulkan::createTopLevelAS()
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         tlas.emplace_back(rayInst);
     }
-    std::cout << "Cluster count: " << m_clusters.size() << std::endl;
-    m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
+    infoFile << "Segment count: " << m_hairs.size() << std::endl;
+    infoFile << "Cluster count: " << m_clusters.size() << std::endl;
+    m_rtBuilder.buildTlas(infoFile, tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
 //--------------------------------------------------------------------------------------------------
