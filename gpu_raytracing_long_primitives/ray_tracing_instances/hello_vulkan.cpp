@@ -813,8 +813,7 @@ float HelloVulkan::calculateCluster(nvmath::mat4& trans, const Cluster& cluster)
         nvmath::dot(dir, segDir) < 0 ? dir -= segDir : dir += segDir;
     }
     dir = nvmath::normalize(dir);
-    const nvmath::vec3f p0 = m_hairs[cluster.index].v0.p;
-    nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit vector
+    nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);
     nvmath::vec3 v = nvmath::cross(unit, dir);
     float safe = 1.0f / (1.0f + nvmath::dot(unit, dir));
 

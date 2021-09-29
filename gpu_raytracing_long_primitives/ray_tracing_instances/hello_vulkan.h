@@ -215,7 +215,7 @@ public:
     std::vector<Hair> m_hairs;            // All hairs
     nvvk::Buffer m_hairsBuffer;      // Buffer holding the hairs
     nvvk::Buffer m_clustersBuffer;
-    nvvk::Buffer m_clustersAabbBuffer;  // Buffer of an unit Aabb
+    nvvk::Buffer m_clustersAabbBuffer;  // Buffer of a unit Aabb
     //std::vector<nvmath::mat4f> m_trans;
     void loadHairModel(const char* filename, cyHairFile& hairfile);
 };
