@@ -468,7 +468,7 @@ const VkPhysicalDeviceMemoryProperties& DeviceMemoryAllocator::getMemoryProperti
 {
   return m_memoryProperties;
 }
-
+    uint64_t mem = 0;
 AllocationID DeviceMemoryAllocator::allocInternal(const VkMemoryRequirements&          memReqs,
                                                   VkMemoryPropertyFlags                memProps,
                                                   bool                                 isLinear,
@@ -485,6 +485,10 @@ AllocationID DeviceMemoryAllocator::allocInternal(const VkMemoryRequirements&   
     result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
     return AllocationID();
   }
+
+
+    mem += memInfo.allocationSize;
+    memoryLog << mem << std::endl;
 
   float priority = m_supportsPriority ? state.priority : DEFAULT_PRIORITY;
   bool  isFirst  = !dedicated;

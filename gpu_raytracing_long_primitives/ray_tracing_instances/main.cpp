@@ -47,6 +47,7 @@
 // }
 #include <chrono>
 #include <fstream>
+#include <filesystem>
 
 struct MilliTimer
 {
@@ -106,6 +107,11 @@ static int const SAMPLE_HEIGHT = 720;
 //
 int main(int argc, char** argv)
 {
+    std::filesystem::path logPath("../media/LogData/strandClustering/");
+    if (!std::filesystem::exists(logPath))
+    {
+        std::filesystem::create_directory(logPath);
+    }
   UNUSED(argc);
 
   // Setup GLFW window
@@ -216,20 +222,19 @@ int main(int argc, char** argv)
   helloVk.loadHairModel(filename, myHairFile);
 
   double time_elapse = timer.elapse();
-  LOGI(" --> (%f)", time_elapse);
+//  LOGI(" --> (%f)", time_elapse);
 
   helloVk.createOffscreenRender();
   helloVk.createDescriptorSetLayout();
   helloVk.createGraphicsPipeline();
   helloVk.createUniformBuffer();
   helloVk.createSceneDescriptionBuffer();
-//  helloVk.updateDescriptorSet();
 
-    // #VKRay
-    helloVk.initRayTracing();
-    helloVk.createBottomLevelAS();
-    helloVk.updateDescriptorSet();
-    helloVk.createTopLevelAS();
+  // #VKRay
+  helloVk.initRayTracing();
+  helloVk.createBottomLevelAS();
+  helloVk.updateDescriptorSet();
+  helloVk.createTopLevelAS();
   helloVk.createRtDescriptorSet();
   helloVk.createRtPipeline();
 
@@ -247,7 +252,7 @@ int main(int argc, char** argv)
 
   // Log file for frametime 
   std::ofstream timeFile;
-  timeFile.open("../media/LogData/timeFile.txt", std::ios::trunc);
+  timeFile.open("../media/LogData/strandClustering/timeFile.log", std::ios::trunc);
 	
   // Main loop
   while (!glfwWindowShouldClose(window))

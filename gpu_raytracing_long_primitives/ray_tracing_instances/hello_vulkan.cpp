@@ -512,10 +512,7 @@ void HelloVulkan::destroyResources()
     vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
 
     m_alloc.destroy(m_hairsBuffer);
-    for (auto i : m_clustersAabbBuffer)
-    {
-        m_alloc.destroy(i);
-    }
+    m_alloc.destroy(m_clustersAabbBuffer);
     m_alloc.destroy(m_clustersBuffer);
 
     m_alloc.deinit();
@@ -776,7 +773,7 @@ auto HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
 //
 nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 {
-    VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_clustersAabbBuffer[0].buffer);
+    VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_clustersAabbBuffer.buffer);
 
     VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
     aabbs.data.deviceAddress = dataAddress;
@@ -814,10 +811,10 @@ float HelloVulkan::calculateCluster(nvmath::mat4& trans, const Cluster& cluster)
         nvmath::dot(dir, segDir) < 0 ? dir -= segDir : dir += segDir;
     }
     dir = nvmath::normalize(dir);
-    nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+    nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);
     nvmath::vec3 v = nvmath::cross(unit, dir);
-    float c = nvmath::dot(unit, dir);
-    float safe = 1.0f / (1.0f + c);
+    float safe = 1.0f / (1.0f + nvmath::dot(unit, dir));
+
     // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
     // smashed into one big matrix because adding the single matrices didn't work
     trans =
@@ -834,11 +831,11 @@ float HelloVulkan::calculateCluster(nvmath::mat4& trans, const Cluster& cluster)
     nvmath::vec3f min = trans_inv * m_hairs[cluster.index].v0.p;
     for (uint32_t j = 0; j < cluster.count; ++j)
     {
-        auto& hair = m_hairs[cluster.index + j];
+        const auto& hair = m_hairs[cluster.index + j];
         nvmath::vec3f begin = trans_inv * hair.v0.p;
         nvmath::vec3f end = trans_inv * hair.v1.p;
-        nvmath::vec3 a = end - begin;
-        nvmath::vec3 extent = nvmath::vec3(hair.thickness) * (nvmath::vec3(1.0f) - nvmath::normalize(a));
+        dir = end - begin;
+        nvmath::vec3 extent = (nvmath::vec3(hair.thickness)) * (nvmath::vec3(1.0f) - nvmath::normalize(dir));
         max = nvmath::nv_max(max, nvmath::nv_max(begin + extent, end + extent));
         min = nvmath::nv_min(min, nvmath::nv_min(begin - extent, end - extent));
     }
@@ -924,9 +921,9 @@ void HelloVulkan::createBottomLevelAS()
     m_clustersBuffer = m_alloc.createBuffer(cmdBuf, m_clusters, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     std::vector<Aabb> hairAabbs;
     hairAabbs.emplace_back(Aabb{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}});
-    m_clustersAabbBuffer.emplace_back(m_alloc.createBuffer(
+    m_clustersAabbBuffer = m_alloc.createBuffer(
             cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                               VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
+                               VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
     genCmdBuf.submitAndWait(cmdBuf);
     // Debug information
     m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
