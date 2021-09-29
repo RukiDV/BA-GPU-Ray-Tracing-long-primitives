@@ -341,7 +341,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     float* vertices = hairfile.GetPointsArray();
     float* colors = hairfile.GetColorsArray();
     const unsigned short* segments = hairfile.GetSegmentsArray();
-    for (uint32_t i = 0; i < 15000; i++)
+    for (uint32_t i = 0; i < hairCount; i++)
     {
         for (uint32_t j = 0; j < segments[i]; j++)
         {
@@ -360,7 +360,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
                     nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3],
                                   colors[pointIndex + 5 + j * 3]),
                     nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3],
-                                  dirs[pointIndex + 5 + j * 3]), 0.04f});
+                                  dirs[pointIndex + 5 + j * 3]), 0.03f});
         }
         pointIndex += (segments[i] + 1) * 3;
     }
@@ -514,10 +514,7 @@ void HelloVulkan::destroyResources()
     vkDestroyDescriptorSetLayout(m_device, m_rtDescSetLayout, nullptr);
 
     m_alloc.destroy(m_hairsBuffer);
-    for (auto i : m_clustersAabbBuffer)
-    {
-        m_alloc.destroy(i);
-    }
+    m_alloc.destroy(m_clustersAabbBuffer);
     m_alloc.destroy(m_clustersBuffer);
 
     m_alloc.deinit();
@@ -776,9 +773,9 @@ auto HelloVulkan::objectToVkGeometryKHR(const ObjModel& model)
 
 // Returning the ray tracing geometry used for the BLAS, containing all hairs
 //
-nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(uint32_t index)
+nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
 {
-    VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_clustersAabbBuffer[index].buffer);
+    VkDeviceAddress dataAddress = nvvk::getBufferDeviceAddress(m_device, m_clustersAabbBuffer.buffer);
 
     VkAccelerationStructureGeometryAabbsDataKHR aabbs{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR};
     aabbs.data.deviceAddress = dataAddress;
@@ -804,7 +801,7 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR(uint32_t 
     return input;
 }
 
-float HelloVulkan::calculateCluster(Aabb& aabb, nvmath::mat4& trans, const Cluster& cluster)
+float HelloVulkan::calculateCluster(nvmath::mat4& trans, const Cluster& cluster)
 {
     nvmath::vec3 dir = m_hairs[cluster.index].v1.p - m_hairs[cluster.index].v0.p;
     for (uint32_t j = 0; j < cluster.count; ++j)
@@ -819,8 +816,7 @@ float HelloVulkan::calculateCluster(Aabb& aabb, nvmath::mat4& trans, const Clust
     const nvmath::vec3f p0 = m_hairs[cluster.index].v0.p;
     nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit vector
     nvmath::vec3 v = nvmath::cross(unit, dir);
-    float a = nvmath::dot(unit, dir);
-    float safe = 1.0f / (1.0f + a);
+    float safe = 1.0f / (1.0f + nvmath::dot(unit, dir));
 
     // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
     // smashed into one big matrix because adding the single matrices didn't work
@@ -830,9 +826,10 @@ float HelloVulkan::calculateCluster(Aabb& aabb, nvmath::mat4& trans, const Clust
                           (v.x * v.y * safe - v.z), ((-v.z * v.z - v.x * v.x) * safe + 1.0f),
                           (v.y * v.z * safe + v.x), 0.0f, v.x * v.z * safe + v.y,
                           v.y * v.z * safe - v.x,
-                          (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, p0.x, p0.y, p0.z, 1.0f);
+                          (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
     nvmath::mat4f trans_inv = nvmath::invert(trans);
 
+    // get max and min in each coordinate of the cluster, considering aabb
     nvmath::vec3f max = trans_inv * m_hairs[cluster.index].v0.p;
     nvmath::vec3f min = trans_inv * m_hairs[cluster.index].v0.p;
     for (uint32_t j = 0; j < cluster.count; ++j)
@@ -845,21 +842,22 @@ float HelloVulkan::calculateCluster(Aabb& aabb, nvmath::mat4& trans, const Clust
         max = nvmath::nv_max(max, nvmath::nv_max(begin + extent, end + extent));
         min = nvmath::nv_min(min, nvmath::nv_min(begin - extent, end - extent));
     }
-    aabb = Aabb{min, max};
+    // calculate transformation matrix to transform a unit aabb to the calculated one
+    nvmath::vec3 range = max - min;
+    nvmath::mat4 scale = nvmath::mat4(range.x, 0.0f, 0.0f, 0.0f,
+                                      0.0f, range.y, 0.0f, 0.0f,
+                                      0.0f, 0.0f, range.z, 0.0f,
+                                      min.x, min.y,  min.z, 1.0f);
+    trans *= scale;
     nvmath::vec3 diag = max - min;
     // return surface of aabb
     return diag.x * diag.y + diag.x * diag.z + diag.y * diag.z;
 }
 
-void HelloVulkan::addCluster(Aabb& aabb, nvmath::mat4& trans, Cluster& cluster, const VkCommandBuffer& cmdBuf)
+void HelloVulkan::addCluster(nvmath::mat4& trans, Cluster& cluster)
 {
-    std::vector<Aabb> hairAabbs;
-    hairAabbs.emplace_back(aabb);
     m_trans.push_back(trans);
     m_clusters.push_back(cluster);
-    m_clustersAabbBuffer.emplace_back(m_alloc.createBuffer(
-            cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                               VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR));
 }
 
 inline float getHalfCylinderSurface(const HelloVulkan::Hair& seg)
@@ -937,7 +935,6 @@ void HelloVulkan::createBottomLevelAS()
         ++cluster.count;
         float bestFillDegree = 0.0f;
         uint32_t bestIndex = 0;
-        Aabb aabb{};
         nvmath::mat4 trans{};
         for (uint32_t j = i + 1; j < i + 10 && j < m_hairs.size(); ++j)
         {
@@ -946,7 +943,7 @@ void HelloVulkan::createBottomLevelAS()
 
             // TODO: somehow there is a memory spike before it drops down, the smaller the clusters are the larger is this spike
             // after the initialization of the program the memory usage decreases until it reaches a fix value after some time
-            float surface = calculateCluster(aabb, trans, cluster);
+            float surface = calculateCluster(trans, cluster);
             assert(cluster.index + cluster.count - 1 == i + 1);
             float allSegSur = oldAllSegSur + getHalfCylinderSurface(m_hairs[i + 1]);
                     //PI * std::pow(currentSeg.thickness, 2.0f) * nvmath::length(currentSeg.v1.p - currentSeg.v0.p);
@@ -964,13 +961,13 @@ void HelloVulkan::createBottomLevelAS()
         // try what happens if the next hair segment gets added, if it leads to a bad cluster, end cluster and start a new one
         // total fillDegree of the cluster would get too bad
         // overlapping segments lead too high fillDegrees, so use difference of fillDegrees as soon as fillDegree improved once
-        if (bestFillDegree < 0.2f || (fillDegreeImproved && (oldFillDegree - bestFillDegree) > 0.1f))
+        if (bestFillDegree < 0.4f || (fillDegreeImproved && (oldFillDegree - bestFillDegree) > 0.05f))
         {
             // if cluster is ready to go, calculate vector from first to last vertex and then rotate this vector to (0,1,0)
             // rotation matrix from (0,1,0) to vector is transformation matrix of instance
             --cluster.count;
-            calculateCluster(aabb, trans, cluster);
-            addCluster(aabb, trans, cluster, cmdBuf);
+            calculateCluster(trans, cluster);
+            addCluster(trans, cluster);
             oldAllSegSur = getHalfCylinderSurface(m_hairs[i + 1]);
             oldFillDegree = 2.0f * PI / 8.0f;
             cluster = Cluster{cluster.index + cluster.count, 1};
@@ -990,24 +987,22 @@ void HelloVulkan::createBottomLevelAS()
     // add another cluster for the remaining segments
     // in the for loop the last segment wasn't added into a cluster, so we also add it here
     // it doesn't matter if we got one or more segments left, this works anyways
-    {
-        Aabb aabb{};
-        nvmath::mat4 trans{};
-        calculateCluster(aabb, trans, cluster);
-        addCluster(aabb, trans, cluster, cmdBuf);
-    }
+    nvmath::mat4 trans;
+    calculateCluster(trans, cluster);
+    addCluster(trans, cluster);
 
     m_hairsBuffer = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     m_clustersBuffer = m_alloc.createBuffer(cmdBuf, m_clusters, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    std::vector<Aabb> hairAabbs;
+    hairAabbs.emplace_back(Aabb{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}});
+    m_clustersAabbBuffer = m_alloc.createBuffer(
+            cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                               VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
     genCmdBuf.submitAndWait(cmdBuf);
     // Debug information
     m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
 
-    for (int i = 0; i < m_clusters.size(); ++i)
-    {
-        auto blasHair = hairToVkGeometryKHR(i);
-        allBlas.emplace_back(blasHair);
-    }
+    allBlas.emplace_back(hairToVkGeometryKHR());
 
     m_rtBuilder.buildBlas(allBlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
@@ -1032,12 +1027,12 @@ void HelloVulkan::createTopLevelAS()
         nvvk::RaytracingBuilderKHR::Instance rayInst;
         rayInst.transform = m_trans[i];
         rayInst.instanceCustomId = static_cast<uint32_t>(i);  // gl_InstanceCustomIndexEXT
-        rayInst.blasId = static_cast<uint32_t>(i);
+        rayInst.blasId = 0;
         rayInst.hitGroupId = 1;
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         tlas.emplace_back(rayInst);
     }
-    std::cout << "Cluster Count: " << m_clusters.size() << std::endl;
+    std::cout << "Cluster count: " << m_clusters.size() << std::endl;
     m_rtBuilder.buildTlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
