@@ -467,7 +467,7 @@ int main(int argc, char** argv)
 #else
       float minFillDegree = 0.5f;
       float maxFillDegreeDiff = 0.05f;
-      status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/strand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
+      int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/strand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
 #endif
     summaryFile.close();
     return status;
