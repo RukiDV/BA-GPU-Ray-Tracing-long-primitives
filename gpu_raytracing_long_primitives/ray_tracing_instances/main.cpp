@@ -102,7 +102,7 @@ void renderUI(HelloVulkan& helloVk)
 static int const SAMPLE_WIDTH  = 1280;
 static int const SAMPLE_HEIGHT = 720;
 
-//#define EVALUATION_LOGGING
+#define EVALUATION_LOGGING
 
 int run(const float minFillDegree, const float maxFillDegreeDiff, const std::string& logPathName, std::ofstream& summaryFile)
 {
@@ -463,10 +463,11 @@ int main(int argc, char** argv)
             summaryFile << "------------------------------" << std::endl;
         }
     }
+    int status = 0;
 #else
       float minFillDegree = 0.5f;
       float maxFillDegreeDiff = 0.05f;
-      int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/strand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
+      status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/strand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
 #endif
     summaryFile.close();
     return status;
