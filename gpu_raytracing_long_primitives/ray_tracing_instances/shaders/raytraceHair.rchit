@@ -130,7 +130,7 @@ void main()
         randR = fract(sin(dot(vec2(randG, randB), vec2(12.9898, 78.233))) * 43758.5453);
         randG = fract(sin(dot(vec2(randR, randG), vec2(12.9898, 78.233))) * 43758.5453);
         randB = fract(sin(dot(vec2(randB, randR), vec2(12.9898, 78.233))) * 43758.5453);
-        prd.hitValue = vec3(randR, randG, randB);//vec3(lightIntensity * (attenuation * color + diffuse));
+        prd.hitValue = vec3(lightIntensity * (attenuation * color + diffuse));
     }
     else
     {

@@ -256,12 +256,21 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
     bool startLogging = false;
     float logTimer = 0.0f;
     float waitTime = 4.0f;
-    uint32_t totalFrames = 0;
+    uint32_t totalFramesPerPos = 0;
+    float totalFrametimePerPos = 0.0f;
     float totalFrametime = 0.0f;
     // automatic evaluation uses these positions in each run
     std::vector<std::pair<nvmath::vec3, nvmath::vec3>> cameraPositions;
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.0f, 4.0f, -8.0f), nvmath::vec3(0.0f, 0.4f, -1.0f)));
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.6f, 10.0f, 3.5f), nvmath::vec3(0.0f, 2.8f, 3.5f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.000f, 4.001f, -8.012f), nvmath::vec3(0.000f, 0.412f, -1.000f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.611f, 10.012f, 3.512f), nvmath::vec3(0.000f, 2.811f, 3.513f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(9.086f, 2.719f, 10.681f), nvmath::vec3(1.878f, -0.177f, 3.119f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(9.941f, 2.731f, 0.366f), nvmath::vec3(-0.124f, -1.242f, 1.017f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-6.990f, 9.166f, -1.842f), nvmath::vec3(-2.716f, 1.438f, 1.972f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.873f, -9.116f, 12.627f), nvmath::vec3(0.574f, -6.739f, 9.909f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-9.699f, -7.202f, 6.284f), nvmath::vec3(-6.783f, -5.240f, 5.400f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(2.591f, 1.724f, -3.551f), nvmath::vec3(0.674f, -1.606f, 3.551f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(5.528f, 1.787f, 9.538f), nvmath::vec3(2.663f, 0.580f, 7.677f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-5.285f, -6.440f, -6.023f), nvmath::vec3(-3.897f, -4.378f, -3.386f)));
 
     helloVk.setupGlfwCallbacks(window);
     ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -306,7 +315,10 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
                     timeFile.close();
                     isLogging = false;
                     CameraManip.setAnimationDuration(1.0);
-                    summaryFile << "Avg. frametime: " + std::to_string(totalFrametime / totalFrames) << std::endl;
+                    summaryFile << "Avg. frametime: " + std::to_string(totalFrametimePerPos / totalFramesPerPos) << std::endl;
+                    totalFrametime += totalFrametimePerPos / totalFramesPerPos;
+                    totalFrametimePerPos = 0.0f;
+                    totalFramesPerPos = 0.0f;
                     if (!cameraPositions.empty())
                     {
                         auto pos = cameraPositions.back();
@@ -337,8 +349,8 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
             if (isLogging)
             {
                 // Log file for frametime
-                totalFrametime += 1000.0f / framerate;
-                ++totalFrames;
+                totalFrametimePerPos += 1000.0f / framerate;
+                ++totalFramesPerPos;
                 timeFile << 1000.0f / framerate << std::endl;
             }
 #ifndef EVALUATION_LOGGING
@@ -419,6 +431,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
         helloVk.submitFrame();
     }
 
+    summaryFile << "Total Avg. frametime: " << std::to_string(totalFrametime / 11.0f) << std::endl;
     // Cleanup
     vkDeviceWaitIdle(helloVk.getDevice());
 
