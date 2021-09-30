@@ -35,14 +35,14 @@ hitAttributeEXT vec2 attribs;
 layout(location = 0) rayPayloadInEXT hitPayload prd;
 layout(location = 1) rayPayloadEXT bool isShadowed;
 
-layout(buffer_reference, scalar) buffer Vertices {Vertex v[]; }; // Positions of an object
-layout(buffer_reference, scalar) buffer Indices {ivec3 i[]; }; // Triangle indices
-layout(buffer_reference, scalar) buffer Materials {WaveFrontMaterial m[]; }; // Array of all materials on an object
-layout(buffer_reference, scalar) buffer MatIndices {int i[]; }; // Material ID for each triangle
+layout(buffer_reference, scalar) buffer Vertices { Vertex v[]; };// Positions of an object
+layout(buffer_reference, scalar) buffer Indices { ivec3 i[]; };// Triangle indices
+layout(buffer_reference, scalar) buffer Materials { WaveFrontMaterial m[]; };// Array of all materials on an object
+layout(buffer_reference, scalar) buffer MatIndices { int i[]; };// Material ID for each triangle
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 1, scalar) buffer SceneDesc_ { SceneDesc i[]; } sceneDesc;
 layout(binding = 2, set = 1) uniform sampler2D textureSamplers[];
-layout(binding = 3, set = 1, scalar, std140) buffer allHairs_ {Hair i[];} allHairs;
+layout(binding = 3, set = 1, scalar, std430) buffer allHairs_ { Hair allHairs[]; };
 // clang-format on
 
 layout(push_constant) uniform Constants
@@ -61,10 +61,10 @@ void main()
 
     if (gl_HitTEXT < 9999)
     {
-        Hair instanceHair = allHairs.i[gl_PrimitiveID];
+        Hair instanceHair = allHairs[gl_PrimitiveID];
 
-        vec3 normal = instanceHair.n1;
-        vec3 color = instanceHair.c0;
+        vec3 normal = instanceHair.v1.n;
+        vec3 color = instanceHair.v0.c;
         // Vector toward the light
         vec3  L;
         float lightIntensity = pushC.lightIntensity;
@@ -122,10 +122,16 @@ void main()
             }
         }
 
+        float randR = (gl_InstanceID + 6);
+        float randG = (gl_InstanceID + 4);
+        float randB = (gl_InstanceID + 8);
+        randR = fract(sin(dot(vec2(randG, randB), vec2(12.9898, 78.233))) * 43758.5453);
+        randG = fract(sin(dot(vec2(randR, randG), vec2(12.9898, 78.233))) * 43758.5453);
+        randB = fract(sin(dot(vec2(randB, randR), vec2(12.9898, 78.233))) * 43758.5453);
         prd.hitValue = vec3(lightIntensity * (attenuation * color + diffuse));
     }
     else
     {
-        prd.hitValue = vec3(1.0, 0.0, 1.0);
+        prd.hitValue = vec3(0.0, 0.0, 0.0);
     }
 }

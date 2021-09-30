@@ -30,6 +30,7 @@
 
 #if defined(ALLOC_DMA)
 #include <nvvk/memallocator_dma_vk.hpp>
+
 using Allocator = nvvk::ResourceAllocatorDma;
 #elif defined(ALLOC_VMA)
 #include <nvvk/memallocator_vma_vk.hpp>
@@ -57,153 +58,148 @@ using Allocator = nvvk::ResourceAllocatorDedicated;
 class HelloVulkan : public nvvk::AppBaseVk
 {
 public:
-  void setup(const VkInstance& instance, const VkDevice& device, const VkPhysicalDevice& physicalDevice, uint32_t queueFamily) override;
-  void createDescriptorSetLayout();
-  void createGraphicsPipeline();
-  void loadModel(const std::string& filename, nvmath::mat4f transform = nvmath::mat4f(1));
-  void updateDescriptorSet();
-  void createUniformBuffer();
-  void createSceneDescriptionBuffer();
-  void createTextureImages(const VkCommandBuffer& cmdBuf, const std::vector<std::string>& textures);
-  void updateUniformBuffer(const VkCommandBuffer& cmdBuf);
-  void onResize(int /*w*/, int /*h*/) override;
-  void destroyResources();
-  void rasterize(const VkCommandBuffer& cmdBuff);
+    void setup(const VkInstance& instance, const VkDevice& device, const VkPhysicalDevice& physicalDevice,
+               uint32_t queueFamily) override;
+    void createDescriptorSetLayout();
+    void createGraphicsPipeline();
+    void loadModel(const std::string& filename, nvmath::mat4f transform = nvmath::mat4f(1));
+    void updateDescriptorSet();
+    void createUniformBuffer();
+    void createSceneDescriptionBuffer();
+    void createTextureImages(const VkCommandBuffer& cmdBuf, const std::vector<std::string>& textures);
+    void updateUniformBuffer(const VkCommandBuffer& cmdBuf);
+    void onResize(int /*w*/, int /*h*/) override;
+    void destroyResources();
+    void rasterize(const VkCommandBuffer& cmdBuff);
 
-  // The OBJ model
-  struct ObjModel
-  {
-    uint32_t     nbIndices{0};
-    uint32_t     nbVertices{0};
-    nvvk::Buffer vertexBuffer;    // Device buffer of all 'Vertex'
-    nvvk::Buffer indexBuffer;     // Device buffer of the indices forming triangles
-    nvvk::Buffer matColorBuffer;  // Device buffer of array of 'Wavefront material'
-    nvvk::Buffer matIndexBuffer;  // Device buffer of array of 'Wavefront material'
-  };
+    struct Aabb
+    {
+        nvmath::vec3f minimum;
+        nvmath::vec3f maximum;
+    };
 
-  // Instance of the OBJ
-  struct ObjInstance
-  {
-    nvmath::mat4f   transform{1};    // Position of the instance
-    nvmath::mat4f   transformIT{1};  // Inverse transpose
-    uint32_t        objIndex{0};     // Reference to the `m_objModel`
-    uint32_t        txtOffset{0};    // Offset in `m_textures`
-    VkDeviceAddress vertices;
-    VkDeviceAddress indices;
-    VkDeviceAddress materials;
-    VkDeviceAddress materialIndices;
-  };
+    // The OBJ model
+    struct ObjModel
+    {
+        uint32_t nbIndices{0};
+        uint32_t nbVertices{0};
+        nvvk::Buffer vertexBuffer;    // Device buffer of all 'Vertex'
+        nvvk::Buffer indexBuffer;     // Device buffer of the indices forming triangles
+        nvvk::Buffer matColorBuffer;  // Device buffer of array of 'Wavefront material'
+        nvvk::Buffer matIndexBuffer;  // Device buffer of array of 'Wavefront material'
+    };
 
-  // Information pushed at each draw call
-  struct ObjPushConstant
-  {
-    nvmath::vec3f lightPosition{10.f, 15.f, 8.f};
-    int           instanceId{0};  // To retrieve the transformation matrix
-    float         lightIntensity{100.f};
-    int           lightType{0};  // 0: point, 1: infinite
-  };
-  ObjPushConstant m_pushConstant;
+    // Instance of the OBJ
+    struct ObjInstance
+    {
+        nvmath::mat4f transform{1};    // Position of the instance
+        nvmath::mat4f transformIT{1};  // Inverse transpose
+        uint32_t objIndex{0};     // Reference to the `m_objModel`
+        uint32_t txtOffset{0};    // Offset in `m_textures`
+        VkDeviceAddress vertices;
+        VkDeviceAddress indices;
+        VkDeviceAddress materials;
+        VkDeviceAddress materialIndices;
+    };
 
-  // Array of objects and instances in the scene
-  std::vector<ObjModel>    m_objModel;
-  std::vector<ObjInstance> m_objInstance;
+    // Information pushed at each draw call
+    struct ObjPushConstant
+    {
+        nvmath::vec3f lightPosition{10.f, 15.f, 8.f};
+        int instanceId{0};  // To retrieve the transformation matrix
+        float lightIntensity{100.f};
+        int lightType{0};  // 0: point, 1: infinite
+    };
+    ObjPushConstant m_pushConstant;
 
-  // Graphic pipeline
-  VkPipelineLayout            m_pipelineLayout;
-  VkPipeline                  m_graphicsPipeline;
-  nvvk::DescriptorSetBindings m_descSetLayoutBind;
-  VkDescriptorPool            m_descPool;
-  VkDescriptorSetLayout       m_descSetLayout;
-  VkDescriptorSet             m_descSet;
+    // Array of objects and instances in the scene
+    std::vector<ObjModel> m_objModel;
+    std::vector<ObjInstance> m_objInstance;
 
-  nvvk::Buffer m_cameraMat;  // Device-Host of the camera matrices
-  nvvk::Buffer m_sceneDesc;  // Device buffer of the OBJ instances
+    // Graphic pipeline
+    VkPipelineLayout m_pipelineLayout;
+    VkPipeline m_graphicsPipeline;
+    nvvk::DescriptorSetBindings m_descSetLayoutBind;
+    VkDescriptorPool m_descPool;
+    VkDescriptorSetLayout m_descSetLayout;
+    VkDescriptorSet m_descSet;
 
-  std::vector<nvvk::Texture> m_textures;  // vector of all textures of the scene
+    nvvk::Buffer m_cameraMat;  // Device-Host of the camera matrices
+    nvvk::Buffer m_sceneDesc;  // Device buffer of the OBJ instances
 
-  // Allocator for buffer, images, acceleration structures
-  Allocator m_alloc;
+    std::vector<nvvk::Texture> m_textures;  // vector of all textures of the scene
 
-  nvvk::DebugUtil m_debug;  // Utility to name objects
+    // Allocator for buffer, images, acceleration structures
+    Allocator m_alloc;
 
-
-  // #Post
-  void createOffscreenRender();
-  void createPostPipeline();
-  void createPostDescriptor();
-  void updatePostDescriptorSet();
-  void drawPost(VkCommandBuffer cmdBuf);
-
-  nvvk::DescriptorSetBindings m_postDescSetLayoutBind;
-  VkDescriptorPool            m_postDescPool{VK_NULL_HANDLE};
-  VkDescriptorSetLayout       m_postDescSetLayout{VK_NULL_HANDLE};
-  VkDescriptorSet             m_postDescSet{VK_NULL_HANDLE};
-  VkPipeline                  m_postPipeline{VK_NULL_HANDLE};
-  VkPipelineLayout            m_postPipelineLayout{VK_NULL_HANDLE};
-  VkRenderPass                m_offscreenRenderPass{VK_NULL_HANDLE};
-  VkFramebuffer               m_offscreenFramebuffer{VK_NULL_HANDLE};
-  nvvk::Texture               m_offscreenColor;
-  nvvk::Texture               m_offscreenDepth;
-  VkFormat                    m_offscreenColorFormat{VK_FORMAT_R32G32B32A32_SFLOAT};
-  VkFormat                    m_offscreenDepthFormat{VK_FORMAT_X8_D24_UNORM_PACK32};
-
-  // #VKRay
-  void initRayTracing();
-  auto objectToVkGeometryKHR(const ObjModel& model);
-  void createBottomLevelAS();
-  void createTopLevelAS();
-  void createRtDescriptorSet();
-  void updateRtDescriptorSet();
-  void createRtPipeline();
-  void raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& clearColor);
+    nvvk::DebugUtil m_debug;  // Utility to name objects
 
 
-  VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rtProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
-  nvvk::RaytracingBuilderKHR                      m_rtBuilder;
-  nvvk::DescriptorSetBindings                     m_rtDescSetLayoutBind;
-  VkDescriptorPool                                m_rtDescPool;
-  VkDescriptorSetLayout                           m_rtDescSetLayout;
-  VkDescriptorSet                                 m_rtDescSet;
-  std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_rtShaderGroups;
-  VkPipelineLayout                                  m_rtPipelineLayout;
-  VkPipeline                                        m_rtPipeline;
-  nvvk::SBTWrapper                                  m_sbtWrapper;
+    // #Post
+    void createOffscreenRender();
+    void createPostPipeline();
+    void createPostDescriptor();
+    void updatePostDescriptorSet();
+    void drawPost(VkCommandBuffer cmdBuf);
 
-  struct RtPushConstant
-  {
-    nvmath::vec4f clearColor;
-    nvmath::vec3f lightPosition;
-    float         lightIntensity{100.0f};
-    int           lightType{0};
-  } m_rtPushConstants;
+    nvvk::DescriptorSetBindings m_postDescSetLayoutBind;
+    VkDescriptorPool m_postDescPool{VK_NULL_HANDLE};
+    VkDescriptorSetLayout m_postDescSetLayout{VK_NULL_HANDLE};
+    VkDescriptorSet m_postDescSet{VK_NULL_HANDLE};
+    VkPipeline m_postPipeline{VK_NULL_HANDLE};
+    VkPipelineLayout m_postPipelineLayout{VK_NULL_HANDLE};
+    VkRenderPass m_offscreenRenderPass{VK_NULL_HANDLE};
+    VkFramebuffer m_offscreenFramebuffer{VK_NULL_HANDLE};
+    nvvk::Texture m_offscreenColor;
+    nvvk::Texture m_offscreenDepth;
+    VkFormat m_offscreenColorFormat{VK_FORMAT_R32G32B32A32_SFLOAT};
+    VkFormat m_offscreenDepthFormat{VK_FORMAT_X8_D24_UNORM_PACK32};
 
-  struct Hair
-  {
-    nvmath::vec3 p0;
-    nvmath::vec3 p1;
-    nvmath::vec3 c0;
-    nvmath::vec3 c1;
-    nvmath::vec3 n0;
-    nvmath::vec3 n1;
-    // HairVertex v1;
-    // HairVertex v2;
-    float        thickness;
-  };
+    // #VKRay
+    void initRayTracing();
+    auto objectToVkGeometryKHR(const ObjModel& model);
+    void createBottomLevelAS(std::ofstream& infoFile);
+    void createTopLevelAS(std::ofstream& infoFile);
+    void createRtDescriptorSet();
+    void updateRtDescriptorSet();
+    void createRtPipeline();
+    void raytrace(const VkCommandBuffer& cmdBuf, const nvmath::vec4f& clearColor);
 
-  struct HairVertex
-  {
-    nvmath::vec3 p;
-    nvmath::vec3 c;
-    nvmath::vec3 n;
-  };
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rtProperties{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+    nvvk::RaytracingBuilderKHR m_rtBuilder;
+    nvvk::DescriptorSetBindings m_rtDescSetLayoutBind;
+    VkDescriptorPool m_rtDescPool;
+    VkDescriptorSetLayout m_rtDescSetLayout;
+    VkDescriptorSet m_rtDescSet;
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_rtShaderGroups;
+    VkPipelineLayout m_rtPipelineLayout;
+    VkPipeline m_rtPipeline;
+    nvvk::SBTWrapper m_sbtWrapper;
 
-  struct Aabb
-  {
-    nvmath::vec3f minimum;
-    nvmath::vec3f maximum;
-  };
+    struct RtPushConstant
+    {
+        nvmath::vec4f clearColor;
+        nvmath::vec3f lightPosition;
+        float lightIntensity{100.0f};
+        int lightType{0};
+    } m_rtPushConstants;
 
-  nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR();
+    struct HairVertex
+    {
+        nvmath::vec3 p;
+        nvmath::vec3 c;
+        nvmath::vec3 n;
+    };
+
+    struct Hair
+    {
+        HairVertex v0;
+        HairVertex v1;
+        float thickness{1.0f};
+    };
+
+    nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR();
 
   std::vector<Hair> m_hairs;            // All hairs
   nvvk::Buffer      m_hairsBuffer;      // Buffer holding the hairs
