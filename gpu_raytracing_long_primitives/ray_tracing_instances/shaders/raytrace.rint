@@ -70,10 +70,6 @@ void main()
     for (int i = 0; i < allClusters[gl_InstanceID].count; ++i)
     {
         Hair hair = allHairs[allClusters[gl_InstanceID].index + i];
-//        vec4 hom_p0 = allClusters[gl_InstanceID].trans * vec4(hair.v0.p, 1.0);
-//        vec3 p0 = vec3(hom_p0 / hom_p0.w);
-//        vec4 hom_p1 = allClusters[gl_InstanceID].trans * vec4(hair.v1.p, 1.0);
-//        vec3 p1 = vec3(hom_p1 / hom_p1.w);
         tHitB = min(tHitB, iHair(ray, hair.v0.p, hair.v1.p, hair.thickness));
     }
 
