@@ -122,9 +122,9 @@ void main()
             }
         }
 
-        float randR = (gl_InstanceID + 6);
-        float randG = (gl_InstanceID + 4);
-        float randB = (gl_InstanceID + 8);
+        float randR = (gl_InstanceID % 675 + 6);
+        float randG = (gl_InstanceID % 245 + 4);
+        float randB = (gl_InstanceID % 558 + 8);
         randR = fract(sin(dot(vec2(randG, randB), vec2(12.9898, 78.233))) * 43758.5453);
         randG = fract(sin(dot(vec2(randR, randG), vec2(12.9898, 78.233))) * 43758.5453);
         randB = fract(sin(dot(vec2(randB, randR), vec2(12.9898, 78.233))) * 43758.5453);

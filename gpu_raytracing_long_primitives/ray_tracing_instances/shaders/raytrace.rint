@@ -69,6 +69,6 @@ void main()
 	tHitB = iHair(ray, hair.v0.p, hair.v1.p, hair.thickness);
 
     // Report hit point
-//    if(tHitB < 9999)
+    if(tHitB < 9999)
         reportIntersectionEXT(tHitB, KIND_HAIR);
 }

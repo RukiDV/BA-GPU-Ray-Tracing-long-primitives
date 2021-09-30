@@ -131,9 +131,6 @@ void HelloVulkan::createDescriptorSetLayout()
     m_descSetLayoutBind.addBinding(3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
                                    VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_NV);
 
-    // Storing clusters (binding = 4)
-    m_descSetLayoutBind.addBinding(4, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1,
-                                   VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_INTERSECTION_BIT_NV);
 
     m_descSetLayout = m_descSetLayoutBind.createLayout(m_device);
     m_descPool = m_descSetLayoutBind.createPool(m_device, 1);
@@ -329,7 +326,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
         printf("Error: Cannot compute hair directions!\n");
     }
 
-    std::vector<Aabb> hairAabbs;
     int pointIndex = 0;
     float* vertices = hairfile.GetPointsArray();
     float* colors = hairfile.GetColorsArray();
@@ -361,7 +357,7 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
 #if 1
     //Box for hair
-
+    std::vector<Aabb> hairAabbs;
     for(const auto& hair : m_hairs)
     {
         nvmath::vec3 extent = nvmath::vec3(hair.thickness) * (nvmath::vec3(1.0f) - nvmath::normalize(hair.v1.p - hair.v0.p));
@@ -811,6 +807,7 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
   nvvk::RaytracingBuilderKHR::BlasInput input;
   input.asGeometry.emplace_back(asGeom);
   input.asBuildOffsetInfo.emplace_back(offset);
+
   return input;
 }
 
