@@ -123,7 +123,7 @@ public:
   structures. These utilities also make implicit use of Vulkan's dedicated
   allocation mechanism.
 
-  We recommend the use of the nvvk::ResourceAllocator class, 
+  We recommend the use of the nvvk::ResourceAllocator class,
   rather than the various create functions provided here, as we may deprecate them.
 
   > **WARNING** : The memory manager serves as proof of concept for some key concepts
@@ -229,7 +229,7 @@ public:
   VkDeviceSize                            getMaxAllocationSize() const;
 
   //////////////////////////////////////////////////////////////////////////
-  
+
   // Implement MemAllocator interface
   virtual MemHandle allocMemory(const MemAllocateInfo& allocInfo, VkResult *pResult = nullptr) override;
   virtual void      freeMemory(MemHandle memHandle) override;

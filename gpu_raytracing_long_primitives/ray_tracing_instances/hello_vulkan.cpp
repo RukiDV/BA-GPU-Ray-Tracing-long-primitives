@@ -336,7 +336,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
         printf("Error: Cannot compute hair directions!\n");
     }
 
-    std::vector<Aabb> hairAabbs;
     int pointIndex = 0;
     float* vertices = hairfile.GetPointsArray();
     float* colors = hairfile.GetColorsArray();
@@ -787,16 +786,15 @@ nvvk::RaytracingBuilderKHR::BlasInput HelloVulkan::hairToVkGeometryKHR()
     asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
     asGeom.geometry.aabbs = aabbs;
 
-    nvvk::RaytracingBuilderKHR::BlasInput input;
-
     VkAccelerationStructureBuildRangeInfoKHR offset{};
     offset.firstVertex = 0;
     offset.primitiveCount = 1;
     offset.primitiveOffset = 0;
     offset.transformOffset = 0;
 
-    input.asGeometry.emplace_back(asGeom);
-    input.asBuildOffsetInfo.emplace_back(offset);
+  nvvk::RaytracingBuilderKHR::BlasInput input;
+  input.asGeometry.emplace_back(asGeom);
+  input.asBuildOffsetInfo.emplace_back(offset);
 
     return input;
 }

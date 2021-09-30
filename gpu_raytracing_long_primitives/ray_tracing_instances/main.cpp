@@ -255,7 +255,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
     bool isLogging = false;
     bool startLogging = false;
     float logTimer = 0.0f;
-    float waitTime = 4.0f;
+    float waitTime = 20.0f;
     uint32_t totalFramesPerPos = 0;
     float totalFrametimePerPos = 0.0f;
     float totalFrametime = 0.0f;
@@ -269,6 +269,8 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
     cameraPositions.emplace_back(std::pair(nvmath::vec3(2.591f, 1.724f, -3.551f), nvmath::vec3(0.674f, -1.606f, 3.551f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(5.528f, 1.787f, 9.538f), nvmath::vec3(2.663f, 0.580f, 7.677f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(-5.285f, -6.440f, -6.023f), nvmath::vec3(-3.897f, -4.378f, -3.386f)));
+
+    const uint32_t cameraPosCount = cameraPositions.size() + 1; // +1 cause of the initial position
 
     helloVk.setupGlfwCallbacks(window);
     ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -331,7 +333,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
                         break;
                     }
                     // wait till frametime stabilizes
-                    waitTime = 1.5f;
+                    waitTime = 20.0f;
                 }
                 // start logging for current position
                 else
@@ -339,7 +341,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
                     timeFile.open(logPathName + std::to_string(fileNumber) + "timeFile.log", std::ios::trunc);
                     ++fileNumber;
                     isLogging = true;
-                    waitTime = 2.0f;
+                    waitTime = 20.0f;
                     std::cout << "Logging started..." << std::endl;
                 }
             }
@@ -429,7 +431,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
         helloVk.submitFrame();
     }
 
-    summaryFile << "Total Avg. frametime: " << std::to_string(totalFrametime / 11.0f) << std::endl;
+    summaryFile << "Total Avg. frametime: " << std::to_string(totalFrametime / cameraPosCount) << std::endl;
     // Cleanup
     vkDeviceWaitIdle(helloVk.getDevice());
 
@@ -478,7 +480,7 @@ int main(int argc, char** argv)
 #else
       float minFillDegree = 0.5f;
       float maxFillDegreeDiff = 0.05f;
-      int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/strand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
+      int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
 #endif
     summaryFile.close();
     return status;
