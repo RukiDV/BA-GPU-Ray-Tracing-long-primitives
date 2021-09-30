@@ -129,7 +129,7 @@ public:
   // - The resulting BLAS (along with the inputs used to build) are stored in m_blas,
   //   and can be referenced by index.
 
-  void buildBlas(const std::vector<RaytracingBuilderKHR::BlasInput>& input,
+  void buildBlas(std::ofstream& infoFile, const std::vector<RaytracingBuilderKHR::BlasInput>& input,
                  VkBuildAccelerationStructureFlagsKHR flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 
 
@@ -143,7 +143,7 @@ public:
   // - See struct of Instance
   // - The resulting TLAS will be stored in m_tlas
   // - update is to rebuild the Tlas with updated matrices
-  void buildTlas(const std::vector<Instance>&         instances,
+  void buildTlas(std::ofstream& tlasFile, const std::vector<Instance>&         instances,
                  VkBuildAccelerationStructureFlagsKHR flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
                  bool                                 update = false);
 

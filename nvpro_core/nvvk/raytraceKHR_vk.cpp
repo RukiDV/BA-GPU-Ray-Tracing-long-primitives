@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "raytraceKHR_vk.hpp"
 
 void nvvk::RaytracingBuilderKHR::setup(const VkDevice& device, nvvk::ResourceAllocator* allocator, uint32_t queueIndex)
@@ -26,7 +27,7 @@ VkAccelerationStructureKHR nvvk::RaytracingBuilderKHR::getAccelerationStructure(
   return m_tlas.as.accel;
 }
 
-void nvvk::RaytracingBuilderKHR::buildBlas(const std::vector<nvvk::RaytracingBuilderKHR::BlasInput>& input,
+void nvvk::RaytracingBuilderKHR::buildBlas(std::ofstream& infoFile, const std::vector<nvvk::RaytracingBuilderKHR::BlasInput>& input,
                                            VkBuildAccelerationStructureFlagsKHR                      flags)
 {
   // Cannot call buildBlas twice.
@@ -56,6 +57,7 @@ void nvvk::RaytracingBuilderKHR::buildBlas(const std::vector<nvvk::RaytracingBui
   VkDeviceSize              maxScratch{0};          // Largest scratch buffer for our BLAS
   std::vector<VkDeviceSize> originalSizes(nbBlas);  // use for stats
 
+  uint32_t blasSize = 0;
   for(size_t idx = 0; idx < nbBlas; idx++)
   {
     // Query both the size of the finished acceleration structure and the  amount of scratch memory
@@ -82,6 +84,7 @@ void nvvk::RaytracingBuilderKHR::buildBlas(const std::vector<nvvk::RaytracingBui
     NAME_IDX_VK(m_blas[idx].as.buffer.buffer, idx);
     buildInfos[idx].dstAccelerationStructure = m_blas[idx].as.accel;  // Setting the where the build lands
 
+    blasSize += createInfo.size;
     // Keeping info
     m_blas[idx].flags = flags;
     maxScratch        = std::max(maxScratch, sizeInfo.buildScratchSize);
@@ -90,6 +93,7 @@ void nvvk::RaytracingBuilderKHR::buildBlas(const std::vector<nvvk::RaytracingBui
     originalSizes[idx] = sizeInfo.accelerationStructureSize;
   }
 
+  infoFile << "Blas size total: " << blasSize << std::endl;
   // Allocate the scratch buffers holding the temporary data of the
   // acceleration structure builder
   nvvk::Buffer scratchBuffer =
@@ -233,7 +237,7 @@ VkAccelerationStructureInstanceKHR nvvk::RaytracingBuilderKHR::instanceToVkGeome
   return gInst;
 }
 
-void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBuilderKHR::Instance>& instances,
+void nvvk::RaytracingBuilderKHR::buildTlas(std::ofstream& infoFile, const std::vector<nvvk::RaytracingBuilderKHR::Instance>& instances,
                                            VkBuildAccelerationStructureFlagsKHR                     flags,
                                            bool                                                     update)
 {
@@ -252,16 +256,13 @@ void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBui
   {
     geometryInstances.push_back(instanceToVkGeometryInstanceKHR(inst));
   }
-
-  std::cout << std::endl << __FILE__ << ":" << __LINE__ << " Size of TLAS instances: " << sizeof(VkAccelerationStructureInstanceKHR) * geometryInstances.size() << std::endl;
-
   // Create a buffer holding the actual instance data (matrices++) for use by the AS builder
   VkDeviceSize instanceDescsSizeInBytes = instances.size() * sizeof(VkAccelerationStructureInstanceKHR);
 
   // Allocate the instance buffer and copy its contents from host to device memory
   if(update)
     m_alloc->destroy(m_instBuffer);
-  m_instBuffer = m_alloc->createBuffer(cmdBuf, geometryInstances, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
+  m_instBuffer = m_alloc->createBuffer(cmdBuf, geometryInstances, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
   NAME_VK(m_instBuffer.buffer);
   VkBufferDeviceAddressInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
   bufferInfo.buffer               = m_instBuffer.buffer;
@@ -303,7 +304,6 @@ void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBui
   VkAccelerationStructureBuildSizesInfoKHR sizeInfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
   vkGetAccelerationStructureBuildSizesKHR(m_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &buildInfo, &count, &sizeInfo);
 
-
   // Create TLAS
   if(update == false)
   {
@@ -322,6 +322,7 @@ void nvvk::RaytracingBuilderKHR::buildTlas(const std::vector<nvvk::RaytracingBui
   bufferInfo.buffer              = scratchBuffer.buffer;
   VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(m_device, &bufferInfo);
 
+  infoFile << "Size of TLAS: " << (sizeInfo.accelerationStructureSize) << std::endl;
 
   // Update build information
   buildInfo.srcAccelerationStructure  = update ? m_tlas.as.accel : VK_NULL_HANDLE;

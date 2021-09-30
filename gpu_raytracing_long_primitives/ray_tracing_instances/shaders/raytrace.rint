@@ -7,10 +7,11 @@
 #include "wavefront.glsl"
 
 
-layout(binding = 3, set = 1, scalar, std140) buffer allHairs_
+layout(binding = 3, set = 1, scalar, std430) buffer allHairs_
 {
     Hair allHairs[];
 };
+
 
 struct Ray
 {
@@ -18,13 +19,8 @@ struct Ray
     vec3 direction;
 };
 
-
-float iHair(Ray r, in mat4 trans, float thickness)
+float iHair(Ray r, in vec3 p0, in vec3 p1, float thickness)
 {
-    vec4 hom_p0 = trans * vec4(0.0, 0.0, 0.0, 1.0);
-    vec3 p0 = vec3(hom_p0 / hom_p0.w);
-    vec4 hom_p1 = trans * vec4(0.0, 1.0, 0.0, 1.0);
-    vec3 p1 = vec3(hom_p1 / hom_p1.w);
     // center the cylinder, normalize axis
     vec3 cc = 0.5*(p0 + p1);
     float ch = length(p1 - p0);
@@ -68,10 +64,11 @@ void main()
     ray.direction = gl_WorldRayDirectionEXT;
 
     float tHitB = 10000.0;
-    Hair hair = allHairs[gl_InstanceID];
-    tHitB = iHair(ray, hair.trans, hair.thickness);
 
-  // Report hit point
-//  if(tHitB < 9999)
-    reportIntersectionEXT(tHitB, KIND_HAIR);
+	Hair hair = allHairs[gl_InstanceID];
+	tHitB = iHair(ray, hair.v0.p, hair.v1.p, hair.thickness);
+
+    // Report hit point
+    if(tHitB < 9999)
+        reportIntersectionEXT(tHitB, KIND_HAIR);
 }
