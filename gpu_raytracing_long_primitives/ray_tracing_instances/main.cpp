@@ -263,9 +263,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
     std::vector<std::pair<nvmath::vec3, nvmath::vec3>> cameraPositions;
     cameraPositions.emplace_back(std::pair(nvmath::vec3(0.000f, 4.001f, -8.012f), nvmath::vec3(0.000f, 0.412f, -1.000f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(0.611f, 10.012f, 3.512f), nvmath::vec3(0.000f, 2.811f, 3.513f)));
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(9.086f, 2.719f, 10.681f), nvmath::vec3(1.878f, -0.177f, 3.119f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(9.941f, 2.731f, 0.366f), nvmath::vec3(-0.124f, -1.242f, 1.017f)));
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(-6.990f, 9.166f, -1.842f), nvmath::vec3(-2.716f, 1.438f, 1.972f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(0.873f, -9.116f, 12.627f), nvmath::vec3(0.574f, -6.739f, 9.909f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(-9.699f, -7.202f, 6.284f), nvmath::vec3(-6.783f, -5.240f, 5.400f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(2.591f, 1.724f, -3.551f), nvmath::vec3(0.674f, -1.606f, 3.551f)));
