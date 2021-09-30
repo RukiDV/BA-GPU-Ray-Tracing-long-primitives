@@ -78,6 +78,6 @@ void main()
     }
 
     // Report hit point
-    //if(tHitB < 9999)
-    reportIntersectionEXT(tHitB, KIND_HAIR);
+    if(tHitB < 9999)
+        reportIntersectionEXT(tHitB, KIND_HAIR);
 }

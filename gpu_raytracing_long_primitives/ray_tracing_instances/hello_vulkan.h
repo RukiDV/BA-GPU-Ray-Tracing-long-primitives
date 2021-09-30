@@ -48,10 +48,6 @@ using Allocator = nvvk::ResourceAllocatorDedicated;
 #include "nvvk/sbtwrapper_vk.hpp"
 #include "cyHairFile.h"
 
-static float const minFillDegree = 0.5f;
-static float const maxFillDegreeDiff = 0.05f;
-static std::string const logPathName = "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/";
-
 //--------------------------------------------------------------------------------------------------
 // Simple rasterizer of OBJ objects
 // - Each OBJ loaded are stored in an `ObjModel` and referenced by a `ObjInstance`
@@ -170,7 +166,7 @@ public:
     auto objectToVkGeometryKHR(const ObjModel& model);
     float calculateCluster(nvmath::mat4& trans, const Cluster& cluster);
     void addCluster(nvmath::mat4& trans, Cluster& cluster);
-    void createBottomLevelAS(std::ofstream& infoFile);
+    void createBottomLevelAS(std::ofstream& infoFile, std::ofstream& clusterLog, float minFillDegree, float maxFillDegreeDiff);
     void createTopLevelAS(std::ofstream& infoFile);
     void createRtDescriptorSet();
     void updateRtDescriptorSet();

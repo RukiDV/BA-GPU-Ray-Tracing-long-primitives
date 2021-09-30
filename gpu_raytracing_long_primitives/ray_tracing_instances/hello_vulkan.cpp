@@ -868,7 +868,7 @@ inline float getHalfCylinderSurface(const HelloVulkan::Hair& seg)
 //
 //
 #define grid_size 2097151 // (2^21)-1 resolution of morton code
-void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
+void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile, std::ofstream& clusterLog, float minFillDegree, float maxFillDegreeDiff)
 {
     // TODO: going through all hairs, define for every hair the morton code(calculate in which grid it goes),
     // TODO: grid cells have morton code and finally you get a list with morton-Codes(pair from code and hair), use for sorting the hair list
@@ -919,17 +919,13 @@ void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
       allBlas.emplace_back(blas);
     }*/
     // hairs
-
     Cluster cluster{0, 1};
     // the fillDegree of the bounding box of the first segment is always the same, because we are using a OBB
     float oldFillDegree = 2.0f * PI / 8.0f; // 2.0 * PI / 8.0 (half surface of a segment with radius = 1 and height = 1 and its bounding box
     float oldAllSegSur = getHalfCylinderSurface(m_hairs[0]);
     bool fillDegreeImproved = false;
-    std::ofstream clusterLog;
-    clusterLog.open(logPathName + "cluster.log", std::ios::trunc);
     for (uint32_t i = 0; i < m_hairs.size() - 1; ++i)
     {
-//        clusterLog << "Progress: " << i << "/" << m_hairs.size() << "; cluster index: " << cluster.index << "; cluster size: " << cluster.count << std::endl;
         Hair& hair = m_hairs[i];
         ++cluster.count;
         float bestFillDegree = 0.0f;
@@ -981,7 +977,6 @@ void HelloVulkan::createBottomLevelAS(std::ofstream& infoFile)
             oldFillDegree = bestFillDegree;
         }
     }
-    clusterLog.close();
     // add another cluster for the remaining segments
     // in the for loop the last segment wasn't added into a cluster, so we also add it here
     // it doesn't matter if we got one or more segments left, this works anyways
@@ -1032,6 +1027,7 @@ void HelloVulkan::createTopLevelAS(std::ofstream& infoFile)
     }
     infoFile << "Segment count: " << m_hairs.size() << std::endl;
     infoFile << "Cluster count: " << m_clusters.size() << std::endl;
+    infoFile << "Avg. cluster size: " << std::to_string(float(m_hairs.size()) / float(m_clusters.size())) << std::endl;
     m_rtBuilder.buildTlas(infoFile, tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
