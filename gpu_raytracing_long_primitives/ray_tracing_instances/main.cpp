@@ -450,19 +450,19 @@ int run(const float minFillDegree, const std::string& logPathName, std::ofstream
 int main(int argc, char** argv)
 {
 
-    std::filesystem::path logPath("../media/LogData/morton/");
+    std::filesystem::path logPath("../media/LogData/perSegmentMorton/");
     if (!std::filesystem::exists(logPath))
     {
         std::filesystem::create_directories(logPath);
     }
     std::ofstream summaryFile;
-    summaryFile.open("../media/LogData/morton/summary.log", std::ios::trunc);
+    summaryFile.open("../media/LogData/perSegmentMorton/summary.log", std::ios::trunc);
 #ifdef EVALUATION_LOGGING
-    for (float minFillDegree = 0.65f; minFillDegree <= 1.1f; minFillDegree += 0.05f)
+    for (float minFillDegree = 0.0f; minFillDegree <= 0.66f; minFillDegree += 0.05f)
     {
         summaryFile << "minFillDegree: " + std::to_string(minFillDegree) << std::endl;
         std::cout << "Start: minFillDegree: " + std::to_string(minFillDegree) + "/1.0" << std::endl;
-        std::string logPathName = "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")/";
+        std::string logPathName = "../media/LogData/perSegmentMorton/(" + std::to_string(minFillDegree) + ")/";
         // start run with current parameters
         if (run(minFillDegree, logPathName, summaryFile) != 0)
         {
@@ -473,9 +473,8 @@ int main(int argc, char** argv)
     }
     int status = 0;
 #else
-      float minFillDegree = 0.7f;
-      float maxFillDegreeDiff = 0.05f;
-      int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
+      float minFillDegree = 0.5f;
+      int status = run(minFillDegree, "../media/LogData/perSegmentMorton/(" + std::to_string(minFillDegree) + ")/", summaryFile);
 #endif
     summaryFile.close();
     return status;

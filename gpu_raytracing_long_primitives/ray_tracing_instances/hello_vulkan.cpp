@@ -352,10 +352,12 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
                                  vertices[pointIndex + 5 + j * 3]) / 7.0f;
 
             m_hairs.push_back(Hair{
-                    p0, nvmath::vec3f(245.0f, 245.0f, 222.0f),
+                    p0, nvmath::vec3f(colors[pointIndex + j * 3], colors[pointIndex + 1 + j * 3],
+                                      colors[pointIndex + 2 + j * 3]),
                     nvmath::vec3f(dirs[pointIndex + j * 3], dirs[pointIndex + 1 + j * 3], dirs[pointIndex + 2 + j * 3]),
                     p1,
-                    nvmath::vec3f(245.0f, 245.0f, 222.0f),
+                    nvmath::vec3f(colors[pointIndex + 3 + j * 3], colors[pointIndex + 4 + j * 3],
+                                  colors[pointIndex + 5 + j * 3]),
                     nvmath::vec3f(dirs[pointIndex + 3 + j * 3], dirs[pointIndex + 4 + j * 3],
                                   dirs[pointIndex + 5 + j * 3]), 0.03f});
         }
