@@ -62,7 +62,7 @@ void main()
 
     if (gl_HitTEXT < 9999)
     {
-        Hair instanceHair = allHairs[allClusters[gl_InstanceID].index];
+        Hair instanceHair = allHairs[allClusters[gl_InstanceID].index + gl_PrimitiveID];
 
         vec3 normal = instanceHair.v1.n;
         vec3 color = instanceHair.v0.c;

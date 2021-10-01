@@ -104,7 +104,7 @@ static int const SAMPLE_HEIGHT = 720;
 
 #define EVALUATION_LOGGING
 
-int run(const float minFillDegree, const float maxFillDegreeDiff, const std::string& logPathName, std::ofstream& summaryFile)
+int run(const float minFillDegree, const std::string& logPathName, std::ofstream& summaryFile)
 {
     std::filesystem::path logPath(logPathName);
     if (!std::filesystem::exists(logPath))
@@ -235,7 +235,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
 
     // #VKRay
     helloVk.initRayTracing();
-    helloVk.createBottomLevelAS(summaryFile, clusterLog, minFillDegree, maxFillDegreeDiff);
+    helloVk.createBottomLevelAS(summaryFile, clusterLog, minFillDegree);
     helloVk.updateDescriptorSet();
     helloVk.createTopLevelAS(summaryFile);
     helloVk.createRtDescriptorSet();
@@ -458,27 +458,22 @@ int main(int argc, char** argv)
     std::ofstream summaryFile;
     summaryFile.open("../media/LogData/morton/summary.log", std::ios::trunc);
 #ifdef EVALUATION_LOGGING
-    for (float maxFillDegreeDiff = 0.01f; maxFillDegreeDiff <= 0.1f; maxFillDegreeDiff += 0.01f)
+    for (float minFillDegree = 0.65f; minFillDegree <= 1.1f; minFillDegree += 0.05f)
     {
-        for (float minFillDegree = 0.1f; minFillDegree <= 1.1f; minFillDegree += 0.1f)
+        summaryFile << "minFillDegree: " + std::to_string(minFillDegree) << std::endl;
+        std::cout << "Start: minFillDegree: " + std::to_string(minFillDegree) + "/1.0" << std::endl;
+        std::string logPathName = "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")/";
+        // start run with current parameters
+        if (run(minFillDegree, logPathName, summaryFile) != 0)
         {
-            summaryFile << "minFillDegree: " + std::to_string(minFillDegree) + "; maxFillDegreeDiff: " + std::to_string(maxFillDegreeDiff) << std::endl;
-            std::cout << "Start: minFillDegree: " + std::to_string(minFillDegree) + "/1.0, maxFillDegreeDiff: " +
-                         std::to_string(maxFillDegreeDiff) + "/0.15" << std::endl;
-            std::string logPathName = "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")(" +
-                                      std::to_string(maxFillDegreeDiff) + ")/";
-            // start run with current parameters
-            if (run(minFillDegree, maxFillDegreeDiff, logPathName, summaryFile) != 0)
-            {
-                summaryFile.close();
-                return -1;
-            }
-            summaryFile << "------------------------------" << std::endl;
+            summaryFile.close();
+            return -1;
         }
+        summaryFile << "------------------------------" << std::endl;
     }
     int status = 0;
 #else
-      float minFillDegree = 0.5f;
+      float minFillDegree = 0.7f;
       float maxFillDegreeDiff = 0.05f;
       int status = run(minFillDegree, maxFillDegreeDiff, "../media/LogData/morton/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
 #endif
