@@ -66,12 +66,8 @@ void main()
 
     float tHitB = 10000.0;
 
-    // TODO: performance overhead?? clustering makes that all segments of the cluster need to be intersected, if the corresponding Aabb is hit
-    for (int i = 0; i < allClusters[gl_InstanceID].count; ++i)
-    {
-        Hair hair = allHairs[allClusters[gl_InstanceID].index + i];
+        Hair hair = allHairs[allClusters[gl_InstanceID].index + gl_PrimitiveID];
         tHitB = min(tHitB, iHair(ray, hair.v0.p, hair.v1.p, hair.thickness));
-    }
 
     // Report hit point
     if(tHitB < 9999)

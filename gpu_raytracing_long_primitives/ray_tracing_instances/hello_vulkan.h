@@ -164,9 +164,10 @@ public:
     // #VKRay
     void initRayTracing();
     auto objectToVkGeometryKHR(const ObjModel& model);
-    float calculateCluster(nvmath::mat4& trans, const Cluster& cluster);
-    void addCluster(nvmath::mat4& trans, Cluster& cluster);
-    void createBottomLevelAS(std::ofstream& infoFile, std::ofstream& clusterLog, float minFillDegree, float maxFillDegreeDiff);
+    nvmath::mat4 calculateTransformation(const Cluster& cluster);
+    float calculateAabb(Aabb& aabb, const nvmath::mat4& trans, const uint32_t i);
+    void addCluster(std::vector<Aabb>& aabb, nvmath::mat4& trans, Cluster& cluster, VkCommandBuffer& cmdBuf);
+    void createBottomLevelAS(std::ofstream& infoFile, std::ofstream& clusterLog, float minFillDegree);
     void createTopLevelAS(std::ofstream& infoFile);
     void createRtDescriptorSet();
     void updateRtDescriptorSet();
@@ -207,14 +208,14 @@ public:
         float thickness{1.0f};
     };
 
-    nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR();
+    nvvk::RaytracingBuilderKHR::BlasInput hairToVkGeometryKHR(uint32_t i);
 
     std::vector<Cluster> m_clusters;
     std::vector<nvmath::mat4> m_trans;
     std::vector<Hair> m_hairs;            // All hairs
     nvvk::Buffer m_hairsBuffer;      // Buffer holding the hairs
     nvvk::Buffer m_clustersBuffer;
-    nvvk::Buffer m_clustersAabbBuffer;  // Buffer of a unit Aabb
+    std::vector<nvvk::Buffer> m_clustersAabbBuffer;
     //std::vector<nvmath::mat4f> m_trans;
     void loadHairModel(const char* filename, cyHairFile& hairfile);
 };
