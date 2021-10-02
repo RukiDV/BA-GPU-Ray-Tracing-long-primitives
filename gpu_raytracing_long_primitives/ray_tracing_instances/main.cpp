@@ -218,7 +218,7 @@ int run(const float minFillDegree, const float maxFillDegreeDiff, const std::str
     cyHairFile myHairFile;
     const char* filename = "../media/scenes/dark.hair";
     helloVk.loadHairModel(filename, myHairFile);
-
+//    helloVk.loadStraightSegments();
 //    std::ofstream infoFile;
 //    infoFile.open(logPathName + "info.log", std::ios::trunc);
     std::ofstream clusterLog;
