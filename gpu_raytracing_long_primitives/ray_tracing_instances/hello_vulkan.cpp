@@ -281,6 +281,74 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
     }
 }
 
+void HelloVulkan::loadStraightSegments()
+{
+    std::random_device rd;
+    std::uniform_real_distribution<float> dis(0.001, 0.1);
+    std::default_random_engine gen = std::default_random_engine(dis(rd));
+    for (uint32_t i = 0; i < 125; i++)
+    {
+        for (uint32_t k = 0; k < 120; k++)
+        {
+            uint32_t count = uint32_t(std::ceil(dis(gen) * 64853.0f)) % 140;
+            float length = dis(gen) * 64;
+            for (uint32_t j = 0; j < count; j++)
+            {
+                nvmath::vec3 p0 = nvmath::vec3((-15.0f + float(i) / 10.0f) + length, (-15.0f + float(k) / 10.0f) + length, -15.0f + length);
+                length += dis(gen);
+                nvmath::vec3 p1 = nvmath::vec3((-15.0f + float(i) / 10.0f) + length, (-15.0f + float(k) / 10.0f) + length, -15.0f + length);
+                Hair hair = Hair{
+                        p0, nvmath::vec3f(0.0f, 0.8f, 1.0f),
+                        nvmath::normalize(nvmath::vec3f(-1.0f, -1.0f, -1.0f)),
+                        p1, nvmath::vec3f(0.0f, 0.8f, 1.0f),
+                        nvmath::normalize(nvmath::vec3f(-1.0f, -1.0f, -1.0f)), 0.01f};
+                m_hairs.push_back(hair);
+
+                nvmath::vec3 unit = nvmath::vec3(0.0f, 1.0f, 0.0f);  // unit cylinder
+                nvmath::vec3 dir = nvmath::normalize(p1 - p0);      // direction of segment that is currently calculated
+                nvmath::vec3 v = nvmath::cross(unit, dir);
+                float safe = 1.0f / (1.0f + nvmath::dot(unit, dir));
+                // calculation of rotation matrix: https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+                // smashed into one big matrix because adding the single matrices didn't work
+                nvmath::mat4f trans =
+                        nvmath::mat4f((-v.z * v.z - v.y * v.y) * safe + 1.0f, v.x * v.y * safe + v.z,
+                                      v.x * v.z * safe - v.y, 0.0f,
+                                      (v.x * v.y * safe - v.z), ((-v.z * v.z - v.x * v.x) * safe + 1.0f),
+                                      (v.y * v.z * safe + v.x), 0.0f, v.x * v.z * safe + v.y,
+                                      v.y * v.z * safe - v.x,
+                                      (-v.y * v.y - v.x * v.x) * safe + 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+                nvmath::mat4 trans_inv = nvmath::invert(trans);
+                nvmath::vec3f begin = trans_inv * hair.v0.p;
+                nvmath::vec3f end = trans_inv * hair.v1.p;
+                dir = end - begin;
+                nvmath::vec3 extent = (nvmath::vec3(hair.thickness)) * (nvmath::vec3(1.0f) - nvmath::normalize(dir));
+                nvmath::vec3 max = nvmath::nv_max(begin + extent, end + extent);
+                nvmath::vec3 min = nvmath::nv_min(begin - extent, end - extent);
+                // calculate transformation matrix to transform a unit aabb to the calculated one
+                nvmath::vec3 range = max - min;
+                nvmath::mat4 scale = nvmath::mat4(range.x, 0.0f, 0.0f, 0.0f,
+                                                  0.0f, range.y, 0.0f, 0.0f,
+                                                  0.0f, 0.0f, range.z, 0.0f,
+                                                  min.x, min.y, min.z, 1.0f);
+                trans *= scale;
+                m_trans.push_back(trans);
+            }
+        }
+    }
+    nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
+    VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
+    m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    std::vector<Aabb> hairAabbs;
+    hairAabbs.emplace_back(Aabb{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}});
+    m_hairsAabbBuffer = m_alloc.createBuffer(
+            cmdBuf, hairAabbs, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                               VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
+    genCmdBuf.submitAndWait(cmdBuf);
+
+    // Debug information
+    m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
+}
+
 void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 {
     // Load the hair model
@@ -384,7 +452,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
     }
     nvvk::CommandPool genCmdBuf(m_device, m_graphicsQueueIndex);
     VkCommandBuffer   cmdBuf = genCmdBuf.createCommandBuffer();
-#if 1
     m_hairsBuffer     = m_alloc.createBuffer(cmdBuf, m_hairs, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     std::vector<Aabb> hairAabbs;
     hairAabbs.emplace_back(Aabb{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}});
@@ -395,7 +462,6 @@ void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 
     // Debug information
     m_debug.setObjectName(m_hairsBuffer.buffer, "hairs");
-#endif
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -877,6 +943,7 @@ void HelloVulkan::createTopLevelAS(std::ofstream& infoFile)
         rayInst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         tlas.emplace_back(rayInst);
     }
+    infoFile << "Segments: " << m_hairs.size() << std::endl;
     m_rtBuilder.buildTlas(infoFile, tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
