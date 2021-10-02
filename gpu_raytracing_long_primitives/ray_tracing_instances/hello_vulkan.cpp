@@ -291,6 +291,33 @@ void HelloVulkan::loadModel(const std::string& filename, nvmath::mat4f transform
     }
 }
 
+void HelloVulkan::loadStraightSegments()
+{
+    std::random_device rd;
+    std::uniform_real_distribution<float> dis(0.001, 0.1);
+    std::default_random_engine gen = std::default_random_engine(dis(rd));
+    for (uint32_t i = 0; i < 125; i++)
+    {
+        for (uint32_t k = 0; k < 120; k++)
+        {
+            uint32_t count = uint32_t(std::ceil(dis(gen) * 64853.0f)) % 140;
+            float length = dis(gen) * 64;
+            for (uint32_t j = 0; j < count; j++)
+            {
+                nvmath::vec3 p0 = nvmath::vec3((-15.0f + float(i) / 10.0f) + length, (-15.0f + float(k) / 10.0f) + length, -15.0f + length);
+                length += dis(gen);
+                nvmath::vec3 p1 = nvmath::vec3((-15.0f + float(i) / 10.0f) + length, (-15.0f + float(k) / 10.0f) + length, -15.0f + length);
+                Hair hair = Hair{
+                        p0, nvmath::vec3f(0.0f, 0.8f, 1.0f),
+                        nvmath::normalize(nvmath::vec3f(-1.0f, -1.0f, -1.0f)),
+                        p1, nvmath::vec3f(0.0f, 0.8f, 1.0f),
+                        nvmath::normalize(nvmath::vec3f(-1.0f, -1.0f, -1.0f)), 0.01f};
+                m_hairs.push_back(hair);
+            }
+        }
+    }
+}
+
 void HelloVulkan::loadHairModel(const char* filename, cyHairFile& hairfile)
 {
     // Load the hair model
