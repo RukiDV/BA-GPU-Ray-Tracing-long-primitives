@@ -217,8 +217,8 @@ int run(const float minFillDegree, const std::string& logPathName, std::ofstream
 
     cyHairFile myHairFile;
     const char* filename = "../media/scenes/dark.hair";
-    helloVk.loadHairModel(filename, myHairFile);
-//    helloVk.loadStraightSegments();
+  //  helloVk.loadHairModel(filename, myHairFile);
+helloVk.loadStraightSegments();
 //    std::ofstream infoFile;
 //    infoFile.open(logPathName + "info.log", std::ios::trunc);
     std::ofstream clusterLog;
@@ -261,14 +261,26 @@ int run(const float minFillDegree, const std::string& logPathName, std::ofstream
     float totalFrametime = 0.0f;
     // automatic evaluation uses these positions in each run
     std::vector<std::pair<nvmath::vec3, nvmath::vec3>> cameraPositions;
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(0.000f, 4.001f, -8.012f), nvmath::vec3(0.000f, 0.412f, -1.000f)));
+   /* cameraPositions.emplace_back(std::pair(nvmath::vec3(0.000f, 4.001f, -8.012f), nvmath::vec3(0.000f, 0.412f, -1.000f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(0.611f, 10.012f, 3.512f), nvmath::vec3(0.000f, 2.811f, 3.513f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(9.941f, 2.731f, 0.366f), nvmath::vec3(-0.124f, -1.242f, 1.017f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(0.873f, -9.116f, 12.627f), nvmath::vec3(0.574f, -6.739f, 9.909f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(-9.699f, -7.202f, 6.284f), nvmath::vec3(-6.783f, -5.240f, 5.400f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(2.591f, 1.724f, -3.551f), nvmath::vec3(0.674f, -1.606f, 3.551f)));
     cameraPositions.emplace_back(std::pair(nvmath::vec3(5.528f, 1.787f, 9.538f), nvmath::vec3(2.663f, 0.580f, 7.677f)));
-    cameraPositions.emplace_back(std::pair(nvmath::vec3(-5.285f, -6.440f, -6.023f), nvmath::vec3(-3.897f, -4.378f, -3.386f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-5.285f, -6.440f, -6.023f), nvmath::vec3(-3.897f, -4.378f, -3.386f)));*/
+
+   // new evaluation camera positions for straight lines
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(13.496f, 6.969f, -16.583f), nvmath::vec3(8.055f, 4.130f, -13.071f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-10.336f, -0.899f, -22.831f), nvmath::vec3(-8.648f, -2.552f, -16.167f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-14.441f, -11.993f, -20.315f), nvmath::vec3(-11.432f, -8.851f, -14.741f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-11.774f, -7.839f, -6.356f), nvmath::vec3(-6.004f, -5.647f, -9.679f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(-5.413f, -5.405f, -6.310f), nvmath::vec3(-0.721f, -1.924f, -5.792f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(10.707f, 1.252f, -5.601f), nvmath::vec3(4.023f, -1.054f, -5.586f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(8.729f, 9.325f, -0.606f), nvmath::vec3(5.351f, 4.829f, -3.680f)));
+    cameraPositions.emplace_back(std::pair(nvmath::vec3(10.214f, 4.983f, -10.28f), nvmath::vec3(4.503f, 1.174f, -8.587f)));
+
+
 
     const uint32_t cameraPosCount = cameraPositions.size() + 1; // +1 cause of the initial position
 
