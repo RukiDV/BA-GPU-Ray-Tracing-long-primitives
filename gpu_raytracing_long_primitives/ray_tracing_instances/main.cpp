@@ -218,7 +218,7 @@ int run(const std::string& logPathName, std::ofstream& summaryFile)
     cyHairFile myHairFile;
     const char* filename = "../media/scenes/dark.hair";
     helloVk.loadHairModel(filename, myHairFile);
-
+//    helloVk.loadStraightSegments();
 //    std::ofstream infoFile;
 //    infoFile.open(logPathName + "info.log", std::ios::trunc);
 
