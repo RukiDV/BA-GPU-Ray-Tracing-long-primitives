@@ -102,7 +102,7 @@ void renderUI(HelloVulkan& helloVk)
 static int const SAMPLE_WIDTH  = 1280;
 static int const SAMPLE_HEIGHT = 720;
 
-#define EVALUATION_LOGGING
+//#define EVALUATION_LOGGING
 
 int run(const float minFillDegree, const std::string& logPathName, std::ofstream& summaryFile)
 {
@@ -217,8 +217,8 @@ int run(const float minFillDegree, const std::string& logPathName, std::ofstream
 
     cyHairFile myHairFile;
     const char* filename = "../media/scenes/dark.hair";
-  //  helloVk.loadHairModel(filename, myHairFile);
-helloVk.loadStraightSegments();
+    helloVk.loadHairModel(filename, myHairFile);
+//helloVk.loadStraightSegments();
 //    std::ofstream infoFile;
 //    infoFile.open(logPathName + "info.log", std::ios::trunc);
     std::ofstream clusterLog;
@@ -485,8 +485,8 @@ int main(int argc, char** argv)
     }
     int status = 0;
 #else
-      float minFillDegree = 0.5f;
-      int status = run(minFillDegree, "../media/LogData/perSegmentStrand/(" + std::to_string(minFillDegree) + ")(" + std::to_string(maxFillDegreeDiff) + ")/", summaryFile);
+      float minFillDegree = 0.3f;
+      int status = run(minFillDegree, "../media/LogData/perSegmentStrand/(" + std::to_string(minFillDegree) + ")/", summaryFile);
 #endif
     summaryFile.close();
     return status;
